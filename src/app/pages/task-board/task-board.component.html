@@ -1,0 +1,38 @@
+<section class="task-board">
+  <h2>Task Tracker Pro</h2>
+
+  @if (isLoading(); as loading) {
+    <p class="loading">Loading tasks...</p>
+  } @else {
+    <div class="columns">
+      <div class="column">
+        <h3>To Do</h3>
+        @for (task of todo(); track task.id) {
+          <div class="task">
+            <div class="title">{{ task.title }}</div>
+            <button (click)="moveTo(task.id, 'in-progress')">▶️ Start</button>
+          </div>
+        }
+      </div>
+
+      <div class="column">
+        <h3>In Progress</h3>
+        @for (task of inProgress(); track task.id) {
+          <div class="task">
+            <div class="title">{{ task.title }}</div>
+            <button (click)="moveTo(task.id, 'done')">✅ Complete</button>
+          </div>
+        }
+      </div>
+
+      <div class="column">
+        <h3>Done</h3>
+        @for (task of done(); track task.id) {
+          <div class="task">
+            <div class="title">{{ task.title }}</div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</section>
