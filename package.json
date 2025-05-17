@@ -62,5 +62,9 @@
     "prettier": "^3.5.3",
     "typescript": "~5.7.2",
     "typescript-eslint": "8.32.0"
+  },
+  "volta": {
+    "node": "23.11.0",
+    "pnpm": "10.11.0"
   }
 }
