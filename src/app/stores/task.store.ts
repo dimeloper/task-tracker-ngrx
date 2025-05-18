@@ -31,28 +31,60 @@ export const TASK_BOARD_INITIAL_STATE = new InjectionToken<TaskBoardState>(
 );
 
 export const TaskStore = signalStore(
-  withState(() => inject(TASK_BOARD_INITIAL_STATE)),
+  withState(() => {
+    console.log(
+      '[Store - Init] Initializing with state:',
+      inject(TASK_BOARD_INITIAL_STATE)
+    );
+    return inject(TASK_BOARD_INITIAL_STATE);
+  }),
   withEntities({ entity: type<Task>(), collection: 'task' }),
-  withComputed(store => ({
-    tasksTodo: computed(() =>
-      store.taskEntities().filter(t => t.status === 'todo')
-    ),
-    tasksInProgress: computed(() =>
-      store.taskEntities().filter(t => t.status === 'in-progress')
-    ),
-    tasksDone: computed(() =>
-      store.taskEntities().filter(t => t.status === 'done')
-    ),
-    totalTasks: computed(() => store.taskEntities().length),
-  })),
+  withComputed(store => {
+    console.log('[Store - Setup] Setting up computed selectors');
+    return {
+      tasksTodo: computed(() => {
+        const tasks = store.taskEntities().filter(t => t.status === 'todo');
+        console.log('[Store - Selector] Todo tasks count:', tasks.length);
+        return tasks;
+      }),
+      tasksInProgress: computed(() => {
+        const tasks = store
+          .taskEntities()
+          .filter(t => t.status === 'in-progress');
+        console.log(
+          '[Store - Selector] In Progress tasks count:',
+          tasks.length
+        );
+        return tasks;
+      }),
+      tasksDone: computed(() => {
+        const tasks = store.taskEntities().filter(t => t.status === 'done');
+        console.log('[Store - Selector] Done tasks count:', tasks.length);
+        return tasks;
+      }),
+      totalTasks: computed(() => {
+        const total = store.taskEntities().length;
+        console.log('[Store - Selector] Total tasks:', total);
+        return total;
+      }),
+    };
+  }),
   withMethods((store, service = inject(TaskService)) => {
     const updateTasks = (tasks: Task[]) => {
+      console.log('[Store - Update] Updating tasks in store:', tasks.length);
       patchState(store, setEntities(tasks, { collection: 'task' }));
     };
 
     const updateTaskStatus = (taskId: string, status: Task['status']) => {
+      console.log(
+        `[Store - Update] Updating task ${taskId} status to:`,
+        status
+      );
       const currentTask = store.taskEntities().find(t => t.id === taskId);
-      if (!currentTask) return;
+      if (!currentTask) {
+        console.warn('[Store - Warning] Task not found:', taskId);
+        return;
+      }
 
       const updatedTask: Task = {
         ...currentTask,
@@ -63,6 +95,7 @@ export const TaskStore = signalStore(
     };
 
     const updatePage = (page: number) => {
+      console.log('[Store - Update] Updating current page to:', page);
       patchState(store, { currentPage: page });
     };
 
@@ -71,55 +104,68 @@ export const TaskStore = signalStore(
       updateTaskStatus,
       updatePage,
       async fetchTasks(page = 1) {
+        console.log('[Store - Action] Fetching tasks for page:', page);
         patchState(store, { isLoading: true });
 
         try {
           const result = await firstValueFrom(
             service.getTasks(page, store.pageSize())
           );
+          console.log('[Store - Action] Fetched tasks:', result.tasks.length);
           patchState(store, {
             pageCount: result.totalPages,
             currentPage: page,
           });
           updateTasks(result.tasks);
         } catch (error) {
-          console.error('Error fetching tasks:', error);
+          console.error('[Store - Error] Error fetching tasks:', error);
         } finally {
           patchState(store, { isLoading: false });
         }
       },
 
       async createTask(task: Omit<Task, 'id' | 'createdAt'>) {
+        console.log('[Store - Action] Creating new task:', task);
         try {
           const newTask = await firstValueFrom(service.createTask(task));
+          console.log('[Store - Action] Task created:', newTask);
           const currentTasks = store.taskEntities();
           updateTasks([...currentTasks, newTask]);
           return newTask;
         } catch (error) {
-          console.error('Error creating task:', error);
+          console.error('[Store - Error] Error creating task:', error);
           throw error;
         }
       },
 
       async deleteTask(taskId: string) {
+        console.log('[Store - Action] Deleting task:', taskId);
         try {
           const success = await firstValueFrom(service.deleteTask(taskId));
           if (success) {
+            console.log('[Store - Action] Task deleted successfully');
             patchState(store, removeEntities([taskId], { collection: 'task' }));
+          } else {
+            console.warn('[Store - Warning] Task deletion failed');
           }
           return success;
         } catch (error) {
-          console.error('Error deleting task:', error);
+          console.error('[Store - Error] Error deleting task:', error);
           throw error;
         }
       },
 
       async changeTaskStatus(taskId: string, newStatus: Task['status']) {
+        console.log(
+          `[Store - Action] Changing task ${taskId} status to:`,
+          newStatus
+        );
         updateTaskStatus(taskId, newStatus);
         try {
           await firstValueFrom(service.updateTaskStatus(taskId, newStatus));
+          console.log('[Store - Action] Task status updated successfully');
         } catch (error) {
-          console.error('Error updating task status:', error);
+          console.error('[Store - Error] Error updating task status:', error);
           // Optionally revert status here
         }
       },
