@@ -141,3 +141,24 @@
     }
   }
 }
+
+// Mobile styles
+@media screen and (max-width: 768px) {
+  .task-board {
+    padding: 0.5rem;
+
+    .columns {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .column {
+      flex: 1 1 100%;
+      width: 100%;
+    }
+
+    .create-task {
+      padding: 1rem;
+    }
+  }
+}
