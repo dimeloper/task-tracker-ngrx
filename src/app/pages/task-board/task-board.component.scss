@@ -1,10 +1,60 @@
 .task-board {
   padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
 
   h2 {
     margin-bottom: 1.5rem;
     text-align: center;
     font-size: 2rem;
+  }
+
+  .create-task {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.05);
+
+    .form-group {
+      margin-bottom: 1rem;
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 1rem;
+
+        &:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+      }
+
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+    }
+
+    .create-button {
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background: #218838;
+      }
+    }
   }
 
   .loading {
@@ -38,15 +88,28 @@
       border-radius: 6px;
       margin-bottom: 0.75rem;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
 
-      .title {
-        font-weight: 500;
+      .task-content {
+        margin-bottom: 0.5rem;
+
+        .title {
+          font-weight: 500;
+          margin-bottom: 0.25rem;
+        }
+
+        .description {
+          font-size: 0.9rem;
+          color: #6c757d;
+        }
       }
 
-      button {
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+      }
+
+      .action-button {
         background: #007bff;
         color: white;
         border: none;
@@ -58,6 +121,21 @@
 
         &:hover {
           background: #0056b3;
+        }
+      }
+
+      .delete-button {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background: #c82333;
         }
       }
     }

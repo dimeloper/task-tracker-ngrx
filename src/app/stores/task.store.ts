@@ -7,24 +7,14 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { setEntities, withEntities } from '@ngrx/signals/entities';
+import {
+  setEntities,
+  withEntities,
+  removeEntities,
+} from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
 import { TaskService } from '../services/task.service';
-
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'todo' | 'in-progress' | 'done';
-  createdAt: string;
-}
-
-export interface TaskBoardState {
-  isLoading: boolean;
-  pageSize: number;
-  pageCount: number;
-  currentPage: number;
-}
+import { Task, TaskBoardState } from '../interfaces/task';
 
 const initialState: TaskBoardState = {
   isLoading: false,
@@ -96,6 +86,31 @@ export const TaskStore = signalStore(
           console.error('Error fetching tasks:', error);
         } finally {
           patchState(store, { isLoading: false });
+        }
+      },
+
+      async createTask(task: Omit<Task, 'id' | 'createdAt'>) {
+        try {
+          const newTask = await firstValueFrom(service.createTask(task));
+          const currentTasks = store.taskEntities();
+          updateTasks([...currentTasks, newTask]);
+          return newTask;
+        } catch (error) {
+          console.error('Error creating task:', error);
+          throw error;
+        }
+      },
+
+      async deleteTask(taskId: string) {
+        try {
+          const success = await firstValueFrom(service.deleteTask(taskId));
+          if (success) {
+            patchState(store, removeEntities([taskId], { collection: 'task' }));
+          }
+          return success;
+        } catch (error) {
+          console.error('Error deleting task:', error);
+          throw error;
         }
       },
 
