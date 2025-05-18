@@ -1,155 +1,123 @@
-# TaskTrackerNgrx
+# Task Tracker with NgRx Signals
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.12.
+A modern task management application built with Angular and NgRx Signals, demonstrating state management best practices and reactive programming patterns.
 
-This project serves as a demonstration of NgRx Signal Store capabilities, showcasing how to implement state management using Angular's new signals-based approach. It provides a practical example of building a task tracking application with modern Angular state management patterns.
+## Features
 
-## Signal Store Implementation
+- 📋 Task management with three states: Todo, In Progress, and Done
+- 🔄 Real-time state updates using NgRx Signals
+- 🧪 Comprehensive test coverage with Vitest
+- 📊 Detailed logging for debugging and monitoring
 
-This project demonstrates the use of NgRx Signal Store, a new state management solution that leverages Angular's signals for reactive state management. The implementation includes:
+## Tech Stack
 
-### Key Features
+- Angular 19+
+- NgRx Signals for state management
+- RxJS for reactive programming
+- Vitest for testing
+- SCSS for styling
+- pnpm for package management
 
-- **Signal-based State**: Utilizes Angular's signal system for fine-grained reactivity
-- **Type-safe State Management**: Full TypeScript support with type inference
-- **Computed Values**: Derived state using computed signals
-- **State Updates**: Immutable state updates with built-in immutability helpers
+## Project Structure
 
-### Store Structure
-
-The application's state is organized into:
-
-- **Tasks Store**: Manages the task list and task-related operations
-- **UI Store**: Handles UI-specific state like loading states and filters
-
-### Usage Example
-
-```typescript
-// Accessing store state
-const tasks = inject(TasksStore).tasks;
-const isLoading = inject(TasksStore).isLoading;
-
-// Updating state
-const store = inject(TasksStore);
-store.addTask(newTask);
-store.updateTask(taskId, updates);
-store.deleteTask(taskId);
+```
+src/
+├── app/
+│   ├── components/     # Reusable UI components
+│   ├── interfaces/     # TypeScript interfaces
+│   ├── mocks/         # Mock data for development
+│   ├── pages/         # Page components
+│   ├── services/      # Angular services
+│   └── stores/        # NgRx Signal stores
 ```
 
-### Benefits
+## State Management
 
-- **Performance**: Fine-grained updates with minimal re-renders
-- **Developer Experience**: Simplified API compared to traditional NgRx
-- **Bundle Size**: Smaller bundle size with no additional dependencies
-- **Type Safety**: Full TypeScript integration with excellent type inference
+The application uses NgRx Signals for state management, providing a reactive and efficient way to handle application state. The main store (`TaskStore`) includes:
 
-## Prerequisites
+- State management with `withState`
+- Entity management with `withEntities`
+- Computed selectors with `withComputed`
+- Action methods with `withMethods`
 
-- Node.js (managed by Volta)
-- pnpm (managed by Volta)
+### Store Features
 
-## Project Setup
+- Task CRUD operations
+- Pagination support
+- Status updates
+- Loading state management
+- Error handling
 
-1. Clone the repository
-2. Install dependencies:
+### Logging System
+
+The application includes a comprehensive logging system to track state changes and operations:
+
+```
+[Store - Init]     - Store initialization
+[Store - Setup]    - Store setup and configuration
+[Store - Selector] - Computed selector updates
+[Store - Update]   - State updates
+[Store - Action]   - Action dispatches
+[Store - Warning]  - Warning messages
+[Store - Error]    - Error messages
+
+[Service - Request]  - Service method calls
+[Service - Response] - Service responses
+```
+
+## Testing
+
+The application uses Vitest for testing, with comprehensive test coverage for:
+
+- Store functionality
+- Service operations
+- Component behavior
+- State management
+- Error handling
+
+### Running Tests
 
 ```bash
+# Run all tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Run tests with coverage
+pnpm test:coverage
+```
+
+## Development
+
+```bash
+# Install dependencies
 pnpm install
-```
 
-## Development Tools
-
-### Volta
-
-This project uses [Volta](https://volta.sh/) for managing Node.js and npm versions. The following versions are pinned:
-
-- Node.js: v23.11.0
-- pnpm: v10.9.2
-
-Volta will automatically switch to these versions when you enter the project directory.
-
-### Code Quality Tools
-
-#### ESLint & Prettier
-
-The project uses ESLint and Prettier for code formatting and linting. To run the linter:
-
-```bash
-pnpm lint
-```
-
-To format code:
-
-```bash
-pnpm format
-```
-
-To check formatting:
-
-```bash
-pnpm format:check
-```
-
-#### Husky & lint-staged
-
-The project uses Husky and lint-staged to enforce code quality on commit. The following checks run automatically on staged files before each commit:
-
-- ESLint and Prettier on JavaScript/TypeScript files
-- Prettier on HTML, CSS, and SCSS files
-- Prettier on JSON and Markdown files
-
-## Development server
-
-To start a local development server, run:
-
-```bash
+# Start development server
 pnpm start
+
+# Build for production
+pnpm build
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Mobile Support
 
-## Code scaffolding
+The application is fully responsive with a mobile-first approach:
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- Full-width columns on mobile devices
+- Stacked layout for better mobile viewing
+- Optimized touch targets
+- Responsive typography
 
-```bash
-ng generate component component-name
-```
+## Contributing
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-```bash
-ng generate --help
-```
+## License
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
