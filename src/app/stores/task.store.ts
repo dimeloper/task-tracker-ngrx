@@ -83,7 +83,7 @@ export const TaskStore = signalStore(
       const currentTask = store.taskEntities().find(t => t.id === taskId);
       if (!currentTask) {
         console.warn('[Store - Warning] Task not found:', taskId);
-        return;
+        return null;
       }
 
       const updatedTask: Task = {
@@ -92,6 +92,7 @@ export const TaskStore = signalStore(
       };
 
       patchState(store, setEntities([updatedTask], { collection: 'task' }));
+      return currentTask.status;
     };
 
     const updatePage = (page: number) => {
@@ -160,13 +161,22 @@ export const TaskStore = signalStore(
           `[Store - Action] Changing task ${taskId} status to:`,
           newStatus
         );
-        updateTaskStatus(taskId, newStatus);
+
+        const previousStatus = updateTaskStatus(taskId, newStatus);
+
         try {
           await firstValueFrom(service.updateTaskStatus(taskId, newStatus));
           console.log('[Store - Action] Task status updated successfully');
         } catch (error) {
           console.error('[Store - Error] Error updating task status:', error);
-          // Optionally revert status here
+          if (previousStatus) {
+            console.log(
+              '[Store - Action] Reverting task status to:',
+              previousStatus
+            );
+            updateTaskStatus(taskId, previousStatus);
+          }
+          throw error;
         }
       },
     };
