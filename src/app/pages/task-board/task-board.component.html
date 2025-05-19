@@ -1,22 +1,33 @@
 <section class="task-board">
   <h2>Task Tracker Pro</h2>
 
-  <form class="create-task" (ngSubmit)="createTask()">
+  <form [formGroup]="taskForm" (ngSubmit)="createTask()">
     <div class="form-group">
       <input
         type="text"
-        [(ngModel)]="newTaskTitle"
-        name="title"
-        placeholder="Enter task title"
-        required />
+        formControlName="title"
+        placeholder="Task title"
+        class="form-control" />
+      <div
+        *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched"
+        class="error-message">
+        <span *ngIf="taskForm.get('title')?.errors?.['required']"
+          >Title is required</span
+        >
+        <span *ngIf="taskForm.get('title')?.errors?.['minlength']"
+          >Title must be at least 3 characters</span
+        >
+      </div>
     </div>
     <div class="form-group">
       <textarea
-        [(ngModel)]="newTaskDescription"
-        name="description"
-        placeholder="Enter task description (optional)"></textarea>
+        formControlName="description"
+        placeholder="Task description"
+        class="form-control"></textarea>
     </div>
-    <button type="submit" class="create-button">Create Task</button>
+    <button type="submit" [disabled]="taskForm.invalid" class="button-primary">
+      Add Task
+    </button>
   </form>
 
   @if (isLoading(); as loading) {
@@ -36,10 +47,10 @@
             <div class="actions">
               <button
                 (click)="moveTo(task.id, 'in-progress')"
-                class="action-button">
+                class="button-secondary">
                 Start
               </button>
-              <button (click)="deleteTask(task.id)" class="delete-button">
+              <button (click)="deleteTask(task.id)" class="button-danger">
                 Delete
               </button>
             </div>
@@ -58,10 +69,12 @@
               }
             </div>
             <div class="actions">
-              <button (click)="moveTo(task.id, 'done')" class="action-button">
+              <button
+                (click)="moveTo(task.id, 'done')"
+                class="button-secondary">
                 Complete
               </button>
-              <button (click)="deleteTask(task.id)" class="delete-button">
+              <button (click)="deleteTask(task.id)" class="button-danger">
                 Delete
               </button>
             </div>
@@ -80,7 +93,7 @@
               }
             </div>
             <div class="actions">
-              <button (click)="deleteTask(task.id)" class="delete-button">
+              <button (click)="deleteTask(task.id)" class="button-danger">
                 Delete
               </button>
             </div>
