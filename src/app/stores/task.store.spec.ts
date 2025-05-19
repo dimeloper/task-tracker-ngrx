@@ -17,21 +17,21 @@ describe('TaskStore', () => {
       title: 'Test Task 1',
       description: 'Description 1',
       status: 'todo',
-      createdAt: new Date().toISOString(),
+      createdAt: '2025-01-01T00:00:00.000Z',
     },
     {
       id: '2',
       title: 'Test Task 2',
       description: 'Description 2',
       status: 'in-progress',
-      createdAt: new Date().toISOString(),
+      createdAt: '2025-01-01T00:00:00.000Z',
     },
     {
       id: '3',
       title: 'Test Task 3',
       description: 'Description 3',
       status: 'done',
-      createdAt: new Date().toISOString(),
+      createdAt: '2025-01-01T00:00:00.000Z',
     },
   ];
 
@@ -140,7 +140,7 @@ describe('TaskStore', () => {
         const createdTask: Task = {
           ...newTask,
           id: '4',
-          createdAt: new Date().toISOString(),
+          createdAt: '2025-01-01T00:00:00.000Z',
         };
 
         mockTaskService.createTask = vi.fn().mockReturnValue(of(createdTask));
@@ -222,12 +222,68 @@ describe('TaskStore', () => {
           .fn()
           .mockReturnValue(throwError(() => error));
 
-        await store.changeTaskStatus('1', 'in-progress');
-
+        await expect(
+          store.changeTaskStatus('1', 'in-progress')
+        ).rejects.toThrow(error);
         expect(
           store.taskEntities().find((t: Task) => t.id === '1')?.status
-        ).toBe('in-progress');
+        ).toBe('todo');
       });
+    });
+  });
+
+  describe('status revert functionality', () => {
+    it('should revert status on API error', async () => {
+      // First add a task to the store
+      mockTaskService.getTasks = vi
+        .fn()
+        .mockReturnValue(of({ tasks: [mockTasks[0]], totalPages: 1 }));
+      await store.fetchTasks(1);
+
+      // Mock the API call to fail
+      const error = new Error('Update failed');
+      mockTaskService.updateTaskStatus = vi
+        .fn()
+        .mockReturnValue(throwError(() => error));
+
+      await expect(store.changeTaskStatus('1', 'in-progress')).rejects.toThrow(
+        error
+      );
+
+      // Verify the status was reverted
+      const task = store.taskEntities().find(t => t.id === '1');
+      expect(task?.status).toBe('todo');
+    });
+
+    it('should handle non-existent task', async () => {
+      mockTaskService.updateTaskStatus = vi.fn().mockReturnValue(of(true));
+
+      await store.changeTaskStatus('non-existent', 'in-progress');
+
+      // Verify no changes were made
+      expect(store.taskEntities()).toEqual([]);
+    });
+
+    it('should handle multiple status changes and reverts', async () => {
+      // First add a task to the store
+      mockTaskService.getTasks = vi
+        .fn()
+        .mockReturnValue(of({ tasks: [mockTasks[0]], totalPages: 1 }));
+      await store.fetchTasks(1);
+
+      // First status change succeeds
+      mockTaskService.updateTaskStatus = vi.fn().mockReturnValue(of(true));
+      await store.changeTaskStatus('1', 'in-progress');
+      expect(store.taskEntities()[0].status).toBe('in-progress');
+
+      // Second status change fails and reverts
+      const error = new Error('Update failed');
+      mockTaskService.updateTaskStatus = vi
+        .fn()
+        .mockReturnValue(throwError(() => error));
+
+      await expect(store.changeTaskStatus('1', 'done')).rejects.toThrow(error);
+      expect(store.taskEntities()[0].status).toBe('in-progress');
     });
   });
 });
