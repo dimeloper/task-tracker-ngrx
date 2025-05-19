@@ -4,6 +4,7 @@ import {
   signalStore,
   type,
   withComputed,
+  withHooks,
   withMethods,
   withState,
 } from '@ngrx/signals';
@@ -11,6 +12,7 @@ import {
   setEntities,
   withEntities,
   removeEntities,
+  removeAllEntities,
 } from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
 import { TaskService } from '../services/task.service';
@@ -180,5 +182,20 @@ export const TaskStore = signalStore(
         }
       },
     };
-  })
+  }),
+  withHooks(store => ({
+    onInit() {
+      console.log('[Store - Lifecycle] Store initialized, fetching tasks');
+      store.fetchTasks();
+    },
+    onDestroy() {
+      console.log('[Store - Lifecycle] Store destroyed, resetting state');
+      patchState(store, {
+        isLoading: false,
+        currentPage: 1,
+        pageCount: 1,
+      });
+      patchState(store, removeAllEntities({ collection: 'task' }));
+    },
+  }))
 );

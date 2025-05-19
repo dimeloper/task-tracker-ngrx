@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, Signal } from '@angular/core';
+import { Component, inject, Signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -17,7 +17,7 @@ import { Task } from '../../interfaces/task';
   styleUrls: ['./task-board.component.scss'],
   providers: [TaskStore],
 })
-export class TaskBoardComponent implements OnInit {
+export class TaskBoardComponent {
   readonly store = inject(TaskStore);
   private readonly fb = inject(FormBuilder);
 
@@ -30,10 +30,6 @@ export class TaskBoardComponent implements OnInit {
     title: ['', [Validators.required, Validators.minLength(3)]],
     description: [''],
   });
-
-  ngOnInit(): void {
-    this.store.fetchTasks();
-  }
 
   async createTask() {
     if (this.taskForm.invalid) return;
