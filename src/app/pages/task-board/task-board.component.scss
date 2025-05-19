@@ -1,6 +1,6 @@
 .task-board {
   padding: 1rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 
   h2 {
@@ -9,51 +9,167 @@
     font-size: 2rem;
   }
 
-  .create-task {
+  // Button Base Styles
+  %button-base {
+    border: none;
+    border-radius: 4px;
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    position: relative;
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      background-color: #6c757d !important;
+      color: #fff !important;
+      transform: none !important;
+      box-shadow: none !important;
+      pointer-events: none;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+
+    &:focus:not(:focus-visible) {
+      box-shadow: none;
+    }
+  }
+
+  // Button Variants
+  .button-primary {
+    @extend %button-base;
+    background: #28a745;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #218838;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+    }
+  }
+
+  .button-secondary {
+    @extend %button-base;
+    background: #007bff;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #0056b3;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+  }
+
+  .button-danger {
+    @extend %button-base;
+    background: #dc3545;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #c82333;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+    }
+  }
+
+  form {
     background-color: #f8f9fa;
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 8px;
     margin-bottom: 2rem;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.05);
 
     .form-group {
+      display: flex;
+      flex-direction: column;
       margin-bottom: 1rem;
+      position: relative;
 
-      input,
-      textarea {
-        width: 100%;
+      .form-control {
         padding: 0.75rem;
         border: 1px solid #dee2e6;
         border-radius: 4px;
         font-family: inherit;
         font-size: 1rem;
+        transition: all 0.2s ease;
 
         &:focus {
           outline: none;
           border-color: #007bff;
           box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
+
+        &.ng-invalid.ng-touched {
+          border-color: #dc3545;
+          box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+        }
       }
 
-      textarea {
-        min-height: 80px;
+      textarea.form-control {
         resize: vertical;
+      }
+
+      .error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        span {
+          display: block;
+          padding-left: 0.5rem;
+          position: relative;
+
+          &::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+          }
+        }
       }
     }
 
-    .create-button {
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background-color 0.2s;
-
-      &:hover {
-        background: #218838;
-      }
+    button[type='submit'] {
+      @extend .button-primary;
+      width: 100%;
     }
   }
 
@@ -64,14 +180,14 @@
   }
 
   .columns {
-    display: flex;
-    gap: 1rem;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    width: 100%;
   }
 
   .column {
-    flex: 1 1 30%;
+    min-width: 0;
     background-color: #f8f9fa;
     padding: 1rem;
     border-radius: 8px;
@@ -80,6 +196,8 @@
     h3 {
       margin-bottom: 1rem;
       font-size: 1.2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e9ecef;
     }
 
     .task {
@@ -107,35 +225,17 @@
         display: flex;
         gap: 0.5rem;
         justify-content: flex-end;
-      }
 
-      .action-button {
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 0.4rem 0.7rem;
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background: #0056b3;
+        .action-button {
+          @extend .button-secondary;
+          padding: 0.4rem 0.7rem;
+          font-size: 0.8rem;
         }
-      }
 
-      .delete-button {
-        background: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 0.4rem 0.7rem;
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background: #c82333;
+        .delete-button {
+          @extend .button-danger;
+          padding: 0.4rem 0.7rem;
+          font-size: 0.8rem;
         }
       }
     }
@@ -143,21 +243,16 @@
 }
 
 // Mobile styles
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 1024px) {
   .task-board {
     padding: 0.5rem;
 
     .columns {
-      flex-direction: column;
-      gap: 1.5rem;
+      grid-template-columns: 1fr;
+      gap: 1rem;
     }
 
-    .column {
-      flex: 1 1 100%;
-      width: 100%;
-    }
-
-    .create-task {
+    form {
       padding: 1rem;
     }
   }
