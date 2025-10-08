@@ -1,5 +1,5 @@
 import { Component, inject, Signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormBuilder,
   FormGroup,
@@ -12,7 +12,7 @@ import { Task } from '../../interfaces/task';
 @Component({
   selector: 'app-task-board',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
   templateUrl: './task-board.component.html',
   styleUrls: ['./task-board.component.scss'],
   providers: [TaskStore],

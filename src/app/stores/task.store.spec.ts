@@ -4,12 +4,10 @@ import { TaskService } from '../services/task.service';
 import { Task } from '../interfaces/task';
 import { of, throwError } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
-import { runInInjectionContext } from '@angular/core';
 
 describe('TaskStore', () => {
   let store: InstanceType<typeof TaskStore>;
   let mockTaskService: Partial<TaskService>;
-  let injector: TestBed;
 
   const mockTasks: Task[] = [
     {
@@ -43,7 +41,7 @@ describe('TaskStore', () => {
       updateTaskStatus: vi.fn(),
     };
 
-    injector = TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       providers: [
         TaskStore,
         { provide: TaskService, useValue: mockTaskService },
@@ -59,8 +57,8 @@ describe('TaskStore', () => {
       ],
     });
 
-    // Create a new instance of the store for each test using runInInjectionContext
-    store = runInInjectionContext(injector, () => new TaskStore());
+    // Create a new instance of the store for each test using TestBed
+    store = TestBed.inject(TaskStore);
   });
 
   describe('Initial State', () => {

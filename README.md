@@ -11,7 +11,7 @@ A modern task management application built with Angular and NgRx Signals, demons
 
 ## Tech Stack
 
-- Angular 19+
+- Angular 20+
 - NgRx Signals for state management
 - RxJS for reactive programming
 - Vitest for testing
