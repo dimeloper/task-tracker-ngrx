@@ -8,16 +8,16 @@
         formControlName="title"
         placeholder="Task title"
         class="form-control" />
-      <div
-        *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched"
-        class="error-message">
-        <span *ngIf="taskForm.get('title')?.errors?.['required']"
-          >Title is required</span
-        >
-        <span *ngIf="taskForm.get('title')?.errors?.['minlength']"
-          >Title must be at least 3 characters</span
-        >
-      </div>
+      @if (taskForm.get('title')?.invalid && taskForm.get('title')?.touched) {
+        <div class="error-message">
+          @if (taskForm.get('title')?.errors?.['required']) {
+            <span>Title is required</span>
+          }
+          @if (taskForm.get('title')?.errors?.['minlength']) {
+            <span>Title must be at least 3 characters</span>
+          }
+        </div>
+      }
     </div>
     <div class="form-group">
       <textarea
