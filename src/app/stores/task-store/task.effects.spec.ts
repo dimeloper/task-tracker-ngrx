@@ -51,9 +51,13 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
+      TestBed.inject(TestStore);
       const dispatch = TestBed.runInInjectionContext(() =>
         injectDispatch(taskPageEvents)
       );
@@ -77,7 +81,10 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
       TestBed.inject(TestStore);
@@ -111,7 +118,10 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
       TestBed.inject(TestStore);
@@ -146,7 +156,10 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
       TestBed.inject(TestStore);
@@ -177,7 +190,10 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
       TestBed.inject(TestStore);
@@ -204,7 +220,10 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
       TestBed.inject(TestStore);
@@ -233,7 +252,10 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
       TestBed.inject(TestStore);
@@ -263,7 +285,10 @@ describe('Task Effects', () => {
       );
 
       TestBed.configureTestingModule({
-        providers: [TestStore],
+        providers: [
+          TestStore,
+          { provide: TaskService, useValue: mockTaskService },
+        ],
       });
 
       TestBed.inject(TestStore);
