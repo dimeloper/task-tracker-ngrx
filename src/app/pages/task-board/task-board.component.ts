@@ -1,13 +1,14 @@
 import { Component, inject, Signal } from '@angular/core';
-
 import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { TaskStore } from '../../stores/task.store';
-import { Task } from '../../interfaces/task';
+import { injectDispatch } from '@ngrx/signals/events';
+import { TaskStore } from '../../stores/task-store/task.store';
+import { Task, TaskStatus } from '../../interfaces/task';
+import { taskPageEvents } from '../../stores/task-store/task.events';
 
 @Component({
   selector: 'app-task-board',
@@ -15,11 +16,14 @@ import { Task } from '../../interfaces/task';
   imports: [ReactiveFormsModule],
   templateUrl: './task-board.component.html',
   styleUrls: ['./task-board.component.scss'],
-  providers: [TaskStore],
 })
 export class TaskBoardComponent {
   readonly store = inject(TaskStore);
   private readonly fb = inject(FormBuilder);
+  readonly dispatch = injectDispatch(taskPageEvents);
+
+  // Expose TaskStatus enum to template
+  readonly TaskStatus = TaskStatus;
 
   readonly todo: Signal<Task[]> = this.store.tasksTodo;
   readonly inProgress: Signal<Task[]> = this.store.tasksInProgress;
@@ -31,32 +35,37 @@ export class TaskBoardComponent {
     description: [''],
   });
 
-  async createTask() {
+  constructor() {
+    // Dispatch the 'opened' event when component initializes
+    // This triggers the effect to load tasks
+    this.dispatch.opened();
+  }
+
+  createTask() {
     if (this.taskForm.invalid) return;
 
-    try {
-      await this.store.createTask({
-        title: this.taskForm.get('title')?.value,
-        description: this.taskForm.get('description')?.value,
-        status: 'todo',
-      });
-      this.taskForm.reset();
-    } catch (error) {
-      console.error('Error creating task:', error);
-    }
+    const newTask = {
+      title: this.taskForm.get('title')?.value,
+      description: this.taskForm.get('description')?.value,
+      status: TaskStatus.TODO,
+    };
+
+    // Dispatch event: task.effects.ts handles the API call
+    // task.reducer.ts updates the store state on success
+    this.dispatch.taskCreated(newTask);
+    this.taskForm.reset();
   }
 
-  async deleteTask(taskId: string) {
+  deleteTask(taskId: string) {
     if (confirm('Are you sure you want to delete this task?')) {
-      try {
-        await this.store.deleteTask(taskId);
-      } catch (error) {
-        console.error('Error deleting task:', error);
-      }
+      // Dispatch event: handled by effects and reducer
+      this.dispatch.taskDeleted(taskId);
     }
   }
 
-  moveTo(taskId: string, targetStatus: Task['status']) {
-    this.store.changeTaskStatus(taskId, targetStatus);
+  moveTo(taskId: string, targetStatus: TaskStatus) {
+    // Dispatch event: optimistic update by reducer
+    // Effects handle API call and revert on failure
+    this.dispatch.taskStatusChanged({ id: taskId, status: targetStatus });
   }
 }

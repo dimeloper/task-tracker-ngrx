@@ -30,7 +30,7 @@
     </button>
   </form>
 
-  @if (isLoading(); as loading) {
+  @if (isLoading()) {
     <p class="loading">Loading tasks...</p>
   } @else {
     <div class="columns">
@@ -46,7 +46,7 @@
             </div>
             <div class="actions">
               <button
-                (click)="moveTo(task.id, 'in-progress')"
+                (click)="moveTo(task.id, TaskStatus.IN_PROGRESS)"
                 class="button-secondary">
                 Start
               </button>
@@ -70,7 +70,7 @@
             </div>
             <div class="actions">
               <button
-                (click)="moveTo(task.id, 'done')"
+                (click)="moveTo(task.id, TaskStatus.DONE)"
                 class="button-secondary">
                 Complete
               </button>
