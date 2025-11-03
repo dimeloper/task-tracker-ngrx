@@ -1,13 +1,22 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { TaskStore } from './task.store';
+import { TaskService } from '../../services/task.service';
 
 describe('TaskStore', () => {
   let store: InstanceType<typeof TaskStore>;
+  let mockTaskService: { getTasks: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
+    mockTaskService = {
+      getTasks: vi.fn(),
+    };
+
     TestBed.configureTestingModule({
-      providers: [TaskStore],
+      providers: [
+        TaskStore,
+        { provide: TaskService, useValue: mockTaskService },
+      ],
     });
 
     store = TestBed.inject(TaskStore);
@@ -32,78 +41,95 @@ describe('TaskStore', () => {
     });
   });
 
-  describe('Store Signals', () => {
-    it('should expose task entities signal', () => {
+  describe('Signal Store Features', () => {
+    it('should expose all required signals', () => {
       expect(store.taskEntities).toBeDefined();
-      expect(typeof store.taskEntities).toBe('function');
-    });
-
-    it('should expose loading state signal', () => {
       expect(store.isLoading).toBeDefined();
-      expect(typeof store.isLoading).toBe('function');
-      expect(store.isLoading()).toBe(false);
-    });
-
-    it('should expose pagination signals', () => {
       expect(store.pageSize).toBeDefined();
       expect(store.pageCount).toBeDefined();
       expect(store.currentPage).toBeDefined();
-      expect(store.pageSize()).toBe(10);
-      expect(store.pageCount()).toBe(1);
-      expect(store.currentPage()).toBe(1);
-    });
-
-    it('should expose computed task views', () => {
       expect(store.tasksTodo).toBeDefined();
       expect(store.tasksInProgress).toBeDefined();
       expect(store.tasksDone).toBeDefined();
+    });
+
+    it('should have signals that return values when called', () => {
+      expect(typeof store.taskEntities).toBe('function');
+      expect(typeof store.isLoading).toBe('function');
+      expect(typeof store.tasksTodo).toBe('function');
+
+      expect(Array.isArray(store.taskEntities())).toBe(true);
+      expect(typeof store.isLoading()).toBe('boolean');
+      expect(Array.isArray(store.tasksTodo())).toBe(true);
+    });
+  });
+
+  describe('Computed Task Views', () => {
+    it('should have computed signals defined for filtering tasks by status', () => {
+      // Verify computed signals exist
+      // Note: In real usage, state is updated via events
+      expect(store.tasksTodo).toBeDefined();
+      expect(store.tasksInProgress).toBeDefined();
+      expect(store.tasksDone).toBeDefined();
+
       expect(typeof store.tasksTodo).toBe('function');
       expect(typeof store.tasksInProgress).toBe('function');
       expect(typeof store.tasksDone).toBe('function');
     });
-  });
 
-  describe('Architecture', () => {
-    it('should use signal-based state management', () => {
-      // Verify store is a signal store by checking for signal-based methods
-      expect(store.taskEntities()).toBeDefined();
-      expect(Array.isArray(store.taskEntities())).toBe(true);
-    });
-
-    it('should support entity state management', () => {
-      // Verify entity collection is available
-      const entities = store.taskEntities();
-      expect(Array.isArray(entities)).toBe(true);
-    });
-
-    it('should support computed derived state', () => {
-      // Verify computed signals work
+    it('should return empty arrays when no tasks match status', () => {
       const todo = store.tasksTodo();
       const inProgress = store.tasksInProgress();
       const done = store.tasksDone();
 
-      expect(Array.isArray(todo)).toBe(true);
-      expect(Array.isArray(inProgress)).toBe(true);
-      expect(Array.isArray(done)).toBe(true);
-    });
-
-    it('should be provided as a root service', () => {
-      expect(store).toBeDefined();
-      // Verify it's injectable at root level via the store definition
+      expect(todo).toEqual([]);
+      expect(inProgress).toEqual([]);
+      expect(done).toEqual([]);
     });
   });
 
   describe('Event-Driven Architecture', () => {
-    it('should have been created with event-driven features', () => {
-      // Verify that the store was properly initialized with all features
+    it('should be injectable and ready for event dispatching', () => {
       expect(store).toBeDefined();
-      // The store includes event reducers and effects configured
+      expect(store.taskEntities).toBeDefined();
+      expect(store.isLoading).toBeDefined();
     });
 
-    it('should handle state mutations via events', () => {
-      // The store is configured to handle state mutations through events
-      // Events are dispatched by components and handled by reducers and effects
+    it('should have proper store composition with all features', () => {
+      // Verify store has entity management
       expect(store.taskEntities).toBeDefined();
+
+      // Verify store has state properties
+      expect(store.isLoading).toBeDefined();
+      expect(store.pageSize).toBeDefined();
+      expect(store.currentPage).toBeDefined();
+
+      // Verify store has computed properties
+      expect(store.tasksTodo).toBeDefined();
+      expect(store.tasksInProgress).toBeDefined();
+      expect(store.tasksDone).toBeDefined();
+    });
+
+    it('should initialize with correct default state values', () => {
+      expect(store.isLoading()).toBe(false);
+      expect(store.pageSize()).toBe(10);
+      expect(store.pageCount()).toBe(1);
+      expect(store.currentPage()).toBe(1);
+      expect(store.taskEntities().length).toBe(0);
+    });
+  });
+
+  describe('Integration', () => {
+    it('should work with dependency injection', () => {
+      const injectedStore = TestBed.inject(TaskStore);
+      expect(injectedStore).toBeDefined();
+      expect(injectedStore).toBe(store);
+    });
+
+    it('should be a singleton when provided at root', () => {
+      const store1 = TestBed.inject(TaskStore);
+      const store2 = TestBed.inject(TaskStore);
+      expect(store1).toBe(store2);
     });
   });
 });
