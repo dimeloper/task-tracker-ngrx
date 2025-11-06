@@ -207,47 +207,76 @@ src/
 
 ### Logging System
 
-The application includes comprehensive logging to visualize the complete event flow through the Flux architecture. Event logging is implemented as a reusable store feature (`withEventLogging`) that can be composed into any store.
+The application includes comprehensive logging to visualize the complete event flow through the Flux architecture. Logs are strategically placed at each layer to show the unidirectional data flow.
 
 #### Log Prefixes
 
 ```text
-[Service - Request]  - Outgoing API calls
-[Service - Response] - API responses
-
-[Store Event] [event group] [event name] - All events flowing through the store
-[Task Store] Response from getTasks      - Raw service response (in effects)
-[Task Store] Dispatching [event name]    - Event being dispatched (in effects)
+[Component] Dispatching: [event name]    - Event dispatched from UI component
+[Event → Reducer] [description]          - Event being processed by reducer (synchronous)
+[Event → Effect] [event group] [event]   - Event reaching effects (asynchronous)
+[Effect] [description]                   - Effect internal operations
+[Service - Response] [description]       - API/Service responses
 ```
+
+#### Execution Order
+
+The logs reveal NgRx Signals' internal execution model:
+
+1. **Component dispatches** - User action initiates the flow
+2. **Reducers process first** - Synchronous state updates happen immediately
+3. **Effects run after** - Asynchronous side effects (logging, API calls) execute
+4. **Service responds** - External operations complete
+5. **Success events flow** - Results trigger new reducer and effect cycles
 
 The `withEventLogging` feature automatically:
 
 - Logs all events from specified event groups using `Object.values()`
 - Detects error events (containing "Failure") and logs with `console.error`
+- Runs as an effect, so logs appear after reducers process events
 - Requires no maintenance when new events are added
 
 #### Example Event Flow
 
+**Changing task status (optimistic update):**
+
+```text
+1. [Component] Dispatching: taskStatusChanged               (User clicks to move task)
+   {id: '1', status: 'in-progress'}
+
+2. [Event → Reducer] Task status changed (optimistic)       (State updated immediately)
+   {taskId: '1', newStatus: 'in-progress'}
+
+3. [Event → Effect] [Task Page] taskStatusChanged           (Event logger effect runs)
+   {id: '1', status: 'in-progress'}
+
+4. [Service - Response] Task status updated successfully     (API confirms change)
+
+5. [Event → Effect] [Task API] taskStatusChangedSuccess     (Success event logged)
+   {id: '1', status: 'in-progress'}
+```
+
 **Loading tasks:**
 
 ```text
-1. [Store Event] [Task Page] opened                          (User action)
-2. [Service - Request] Fetching tasks                        (Effect triggers API)
-3. [Service - Response] Tasks fetched                        (API responds)
-4. [Task Store] Dispatching tasksLoadedSuccess               (Effect dispatches result)
-5. [Store Event] [Task API] tasksLoadedSuccess               (Event logged)
+1. [Component] Dispatching: opened                          (Page initializes)
+
+2. [Event → Reducer] Page opened - setting isLoading: true  (Loading state set)
+
+3. [Event → Effect] [Task Page] opened                      (Event logger)
+
+4. [Effect] Response from getTasks                          (Service responds)
+   {tasks: [...], totalPages: 1}
+
+5. [Effect] Dispatching tasksLoadedSuccess                  (Effect dispatches result)
+
+6. [Event → Reducer] Tasks loaded successfully              (State updated with tasks)
+   {count: 10, taskIds: ['1', '2', ...]}
+
+7. [Event → Effect] [Task API] tasksLoadedSuccess           (Success event logged)
 ```
 
-**Creating a task:**
-
-```text
-1. [Store Event] [Task Page] taskCreated                     (User action)
-2. [Service - Request] Creating task                         (Effect triggers API)
-3. [Service - Response] Task created                         (API responds)
-4. [Store Event] [Task API] taskCreatedSuccess               (Result event)
-```
-
-This logging pattern makes it easy to trace the complete lifecycle of any user action through the system.
+This logging pattern makes it easy to trace the complete lifecycle of any user action through the system and understand the order of execution in the Flux architecture.
 
 ## Testing
 

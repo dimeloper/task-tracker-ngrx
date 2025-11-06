@@ -21,7 +21,7 @@ export function withTaskEffects() {
           exhaustMap(() =>
             taskService.getTasks(1, 10).pipe(
               tap(response => {
-                console.log('[Task Store] Response from getTasks:', response);
+                console.log('[Effect] Response from getTasks:', response);
               }),
               catchError((error: { message: string }) =>
                 of(taskApiEvents.tasksLoadedFailure(error.message))
@@ -33,7 +33,7 @@ export function withTaskEffects() {
                 }
                 // Dispatch success with tasks array
                 console.log(
-                  '[Task Store] Dispatching tasksLoadedSuccess with:',
+                  '[Effect] Dispatching tasksLoadedSuccess with:',
                   response.tasks
                 );
                 return of(taskApiEvents.tasksLoadedSuccess(response.tasks));
@@ -75,29 +75,25 @@ export function withTaskEffects() {
         // Change task status
         changeTaskStatus$: events.on(taskPageEvents.taskStatusChanged).pipe(
           exhaustMap(event => {
-            const taskEntitiesFn = store['taskEntities'] as
-              | (() => Task[])
-              | undefined;
-            const taskEntities = taskEntitiesFn?.() || [];
-            const task = taskEntities.find(
-              (t: Task) => t.id === event.payload.id
-            );
-            const previousStatus = task?.status;
-
             return taskService
               .updateTaskStatus(event.payload.id, event.payload.status)
               .pipe(
+                concatMap(() =>
+                  of(
+                    taskApiEvents.taskStatusChangedSuccess({
+                      id: event.payload.id,
+                      status: event.payload.status,
+                    })
+                  )
+                ),
                 catchError((error: { message: string }) =>
                   of(
                     taskApiEvents.taskStatusChangedFailure({
                       id: event.payload.id,
-                      previousStatus: previousStatus!,
+                      previousStatus: event.payload.previousStatus,
                       error: error.message,
                     })
                   )
-                ),
-                concatMap(() =>
-                  of(taskApiEvents.taskStatusChangedSuccess(event.payload))
                 )
               );
           })
