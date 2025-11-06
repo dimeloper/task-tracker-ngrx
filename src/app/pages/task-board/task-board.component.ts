@@ -38,6 +38,7 @@ export class TaskBoardComponent {
   constructor() {
     // Dispatch the 'opened' event when component initializes
     // This triggers the effect to load tasks
+    console.log('[Component] Dispatching: opened');
     this.dispatch.opened();
   }
 
@@ -52,6 +53,7 @@ export class TaskBoardComponent {
 
     // Dispatch event: task.effects.ts handles the API call
     // task.reducer.ts updates the store state on success
+    console.log('[Component] Dispatching: taskCreated', newTask);
     this.dispatch.taskCreated(newTask);
     this.taskForm.reset();
   }
@@ -59,13 +61,27 @@ export class TaskBoardComponent {
   deleteTask(taskId: string) {
     if (confirm('Are you sure you want to delete this task?')) {
       // Dispatch event: handled by effects and reducer
+      console.log('[Component] Dispatching: taskDeleted', { taskId });
       this.dispatch.taskDeleted(taskId);
     }
   }
 
   moveTo(taskId: string, targetStatus: TaskStatus) {
+    // Capture current status before dispatching for potential rollback
+    const task = this.store.taskEntities().find(t => t.id === taskId);
+    const previousStatus = task?.status;
+
     // Dispatch event: optimistic update by reducer
     // Effects handle API call and revert on failure
-    this.dispatch.taskStatusChanged({ id: taskId, status: targetStatus });
+    console.log('[Component] Dispatching: taskStatusChanged', {
+      id: taskId,
+      status: targetStatus,
+      previousStatus,
+    });
+    this.dispatch.taskStatusChanged({
+      id: taskId,
+      status: targetStatus,
+      previousStatus: previousStatus!,
+    });
   }
 }

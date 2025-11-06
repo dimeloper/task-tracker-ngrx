@@ -8,7 +8,11 @@ export const taskPageEvents = eventGroup({
     opened: type<void>(),
     taskCreated: type<Omit<Task, 'id' | 'createdAt'>>(),
     taskDeleted: type<string>(),
-    taskStatusChanged: type<{ id: string; status: TaskStatus }>(),
+    taskStatusChanged: type<{
+      id: string;
+      status: TaskStatus;
+      previousStatus: TaskStatus;
+    }>(),
     pageChanged: type<number>(),
   },
 });

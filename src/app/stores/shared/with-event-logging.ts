@@ -39,10 +39,11 @@ export function withEventLogging(eventGroups: EventGroup[]) {
         logAllEvents$: events.on(...(allEvents as [any, ...any[]])).pipe(
           tap((event: EventWithPayload) => {
             const isError = event.type.includes('Failure');
+
             if (isError) {
-              console.error(`[Store Event] ${event.type}:`, event.payload);
+              console.error(`[Event → Effect] ${event.type}:`, event.payload);
             } else {
-              console.log(`[Store Event] ${event.type}`, event.payload);
+              console.log(`[Event → Effect] ${event.type}`, event.payload);
             }
           })
         ),

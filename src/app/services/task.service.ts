@@ -32,7 +32,6 @@ export class TaskService {
     //   .set('pageSize', pageSize.toString());
     // return this.http.get<{ tasks: Task[]; totalPages: number }>(this.API_URL, { params });
 
-    console.log('[Service - Request] Fetching tasks', { page, pageSize });
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
     const tasks = this.MOCK_DATA.slice(start, end);
@@ -56,7 +55,6 @@ export class TaskService {
     // Returns: Task (with id and createdAt)
     // return this.http.post<Task>(this.API_URL, task);
 
-    console.log('[Service - Request] Creating task', task);
     const newTask: Task = {
       ...task,
       id: `${this.MOCK_DATA.length + 1}`,
@@ -77,7 +75,6 @@ export class TaskService {
     // Returns: boolean (success/failure)
     // return this.http.delete<boolean>(`${this.API_URL}/${taskId}`);
 
-    console.log('[Service - Request] Deleting task', taskId);
     const index = this.MOCK_DATA.findIndex(task => task.id === taskId);
     if (index > -1) {
       this.MOCK_DATA.splice(index, 1);
@@ -106,10 +103,24 @@ export class TaskService {
     // Returns: boolean (success/failure)
     // return this.http.patch<boolean>(`${this.API_URL}/${taskId}/status`, { status: newStatus });
 
-    console.log('[Service - Request] Updating task status', {
-      taskId,
-      newStatus,
-    });
+    // Simulate failure for task ID '3' to demonstrate optimistic update rollback
+    if (taskId === '3') {
+      return of(false).pipe(
+        delay(200),
+        tap(() => {
+          console.error(
+            '[Service - Response] Failed to update task status (simulated failure for task 3)'
+          );
+        }),
+        // Convert false to error to trigger catchError in effect
+        tap(() => {
+          throw new Error(
+            'Failed to update task status: Server error (simulated for task 3)'
+          );
+        })
+      );
+    }
+
     const taskIndex = this.MOCK_DATA.findIndex(task => task.id === taskId);
     if (taskIndex > -1) {
       this.MOCK_DATA[taskIndex] = {
