@@ -60,16 +60,34 @@ describe('TaskService', () => {
     });
 
     it('should create task with unique id', async () => {
-      const newTask: Omit<Task, 'id' | 'createdAt'> = {
+      const base: Omit<Task, 'id' | 'createdAt'> = {
         title: 'New Task',
         description: 'New Description',
         status: 'todo',
       };
 
-      const result1 = await firstValueFrom(service.createTask(newTask));
-      const result2 = await firstValueFrom(service.createTask(newTask));
+      // Distinct titles on purpose: createTask now rejects a duplicate title, so
+      // submitting the same one twice exercises that rule rather than id generation.
+      const result1 = await firstValueFrom(service.createTask(base));
+      const result2 = await firstValueFrom(
+        service.createTask({ ...base, title: 'Another New Task' })
+      );
 
       expect(result1.id).not.toBe(result2.id);
+    });
+
+    it('should reject a title that already exists', async () => {
+      const duplicate: Omit<Task, 'id' | 'createdAt'> = {
+        title: 'Clean the kitchen',
+        description: 'already on the board',
+        status: 'todo',
+      };
+
+      await expect(
+        firstValueFrom(service.createTask(duplicate))
+      ).rejects.toMatchObject({
+        message: 'A task with this title already exists',
+      });
     });
   });
 

@@ -1,32 +1,36 @@
 <section class="task-board">
   <h2>Task Tracker Pro</h2>
 
-  <form [formGroup]="taskForm" (ngSubmit)="createTask()">
+  <form (submit)="createTask($event)" novalidate>
     <div class="form-group">
       <input
         type="text"
-        formControlName="title"
+        [formField]="taskForm.title"
         placeholder="Task title"
         class="form-control" />
-      @if (taskForm.get('title')?.invalid && taskForm.get('title')?.touched) {
+      @if (taskForm.title().touched() && taskForm.title().invalid()) {
         <div class="error-message">
-          @if (taskForm.get('title')?.errors?.['required']) {
-            <span>Title is required</span>
-          }
-          @if (taskForm.get('title')?.errors?.['minlength']) {
-            <span>Title must be at least 3 characters</span>
+          @for (error of taskForm.title().errors(); track error.kind) {
+            <span>{{ error.message }}</span>
           }
         </div>
       }
     </div>
     <div class="form-group">
       <textarea
-        formControlName="description"
+        [formField]="taskForm.description"
         placeholder="Task description"
         class="form-control"></textarea>
     </div>
-    <button type="submit" [disabled]="taskForm.invalid" class="button-primary">
-      Add Task
+    <button
+      type="submit"
+      [disabled]="taskForm().invalid() || taskForm().submitting()"
+      class="button-primary">
+      @if (taskForm().submitting()) {
+        Adding...
+      } @else {
+        Add Task
+      }
     </button>
   </form>
 

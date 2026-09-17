@@ -1,26 +1,33 @@
-import { Component, inject, Signal } from '@angular/core';
+import { Component, inject, signal, Signal } from '@angular/core';
 import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { injectDispatch } from '@ngrx/signals/events';
+  form,
+  FormField,
+  minLength,
+  required,
+  submit,
+} from '@angular/forms/signals';
+import { Events, injectDispatch } from '@ngrx/signals/events';
+import { firstValueFrom } from 'rxjs';
 import { TaskStore } from '../../stores/task-store/task.store';
 import { Task, TaskStatus } from '../../interfaces/task';
-import { taskPageEvents } from '../../stores/task-store/task.events';
+import {
+  taskApiEvents,
+  taskPageEvents,
+} from '../../stores/task-store/task.events';
+
+const EMPTY_DRAFT = { title: '', description: '' };
 
 @Component({
   selector: 'app-task-board',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [FormField],
   templateUrl: './task-board.component.html',
   styleUrls: ['./task-board.component.scss'],
 })
 export class TaskBoardComponent {
   readonly store = inject(TaskStore);
-  private readonly fb = inject(FormBuilder);
   readonly dispatch = injectDispatch(taskPageEvents);
+  private readonly events = inject(Events);
 
   // Expose TaskStatus enum to template
   readonly TaskStatus = TaskStatus;
@@ -30,9 +37,14 @@ export class TaskBoardComponent {
   readonly done: Signal<Task[]> = this.store.tasksDone;
   readonly isLoading = this.store.isLoading;
 
-  taskForm: FormGroup = this.fb.group({
-    title: ['', [Validators.required, Validators.minLength(3)]],
-    description: [''],
+  /** The form's model. Signal Forms writes straight back into this signal. */
+  readonly draft = signal({ ...EMPTY_DRAFT });
+
+  readonly taskForm = form(this.draft, path => {
+    required(path.title, { message: 'Title is required' });
+    minLength(path.title, 3, {
+      message: 'Title must be at least 3 characters',
+    });
   });
 
   constructor() {
@@ -42,20 +54,50 @@ export class TaskBoardComponent {
     this.dispatch.opened();
   }
 
-  createTask() {
-    if (this.taskForm.invalid) return;
+  /**
+   * `submit()` wants an action it can await, and it routes whatever errors that
+   * action returns onto the fields. The store speaks events instead: dispatching
+   * `taskCreated` returns nothing, and the outcome shows up later as a separate
+   * `taskCreatedSuccess` or `taskCreatedFailure`.
+   *
+   * So we bridge the two — subscribe to the outcome first, dispatch, then await.
+   * Subscribing before dispatching is the part that matters: `events.on()` is a
+   * hot stream, so an effect that resolves synchronously would land before the
+   * subscription did and the promise would never settle.
+   */
+  async createTask(event: Event) {
+    event.preventDefault();
 
-    const newTask = {
-      title: this.taskForm.get('title')?.value,
-      description: this.taskForm.get('description')?.value,
-      status: TaskStatus.TODO,
-    };
+    await submit(this.taskForm, async f => {
+      const settled = firstValueFrom(
+        this.events.on(
+          taskApiEvents.taskCreatedSuccess,
+          taskApiEvents.taskCreatedFailure
+        )
+      );
 
-    // Dispatch event: task.effects.ts handles the API call
-    // task.reducer.ts updates the store state on success
-    console.log('[Component] Dispatching: taskCreated', newTask);
-    this.dispatch.taskCreated(newTask);
-    this.taskForm.reset();
+      console.log('[Component] Dispatching: taskCreated', f().value());
+      this.dispatch.taskCreated({
+        title: f.title().value(),
+        description: f.description().value(),
+        status: TaskStatus.TODO,
+      });
+
+      const outcome = await settled;
+      if (outcome.type === taskApiEvents.taskCreatedFailure.type) {
+        return {
+          kind: 'server',
+          message: String(outcome.payload),
+          fieldTree: f.title,
+        };
+      }
+
+      // reset() clears touched and dirty as well as the value. Writing the model
+      // signal directly would leave the field touched, so the "Title is required"
+      // error reappears the instant the form empties.
+      this.taskForm().reset({ ...EMPTY_DRAFT });
+      return undefined;
+    });
   }
 
   deleteTask(taskId: string) {
@@ -65,7 +107,6 @@ export class TaskBoardComponent {
       this.dispatch.taskDeleted(taskId);
     }
   }
-
   moveTo(taskId: string, targetStatus: TaskStatus) {
     // Capture current status before dispatching for potential rollback
     const task = this.store.taskEntities().find(t => t.id === taskId);
