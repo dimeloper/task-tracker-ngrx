@@ -72,6 +72,20 @@ describe('TaskBoardComponent', () => {
       ).toBe(true);
     });
 
+    it('clears touched on success, so the error does not flash straight back', async () => {
+      // Writing the model signal empties the field but leaves it touched, and an
+      // empty touched title is immediately "required" again. Only reset() clears
+      // both, so this is what holds that choice in place.
+      component.draft.set({ title: 'A fresh task', description: '' });
+      component.taskForm.title().markAsTouched();
+
+      await component.createTask(submitEvent());
+
+      // errors() still reports `required` — the field really is empty again. It is
+      // touched() that gates display, which is why clearing it is what matters.
+      expect(component.taskForm.title().touched()).toBe(false);
+    });
+
     it('routes a server rejection onto the title field', async () => {
       // The mock service rejects a title that already exists, which is the kind of
       // failure only the server can know about.

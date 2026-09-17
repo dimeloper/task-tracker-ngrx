@@ -1,4 +1,5 @@
-import { Component, inject, signal, Signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   form,
   FormField,
@@ -19,7 +20,6 @@ const EMPTY_DRAFT = { title: '', description: '' };
 
 @Component({
   selector: 'app-task-board',
-  standalone: true,
   imports: [FormField],
   templateUrl: './task-board.component.html',
   styleUrls: ['./task-board.component.scss'],
@@ -28,6 +28,7 @@ export class TaskBoardComponent {
   readonly store = inject(TaskStore);
   readonly dispatch = injectDispatch(taskPageEvents);
   private readonly events = inject(Events);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Expose TaskStatus enum to template
   readonly TaskStatus = TaskStatus;
@@ -69,11 +70,17 @@ export class TaskBoardComponent {
     event.preventDefault();
 
     await submit(this.taskForm, async f => {
+      // takeUntilDestroyed stops the subscription outliving the component if it
+      // is torn down mid-submit. That completes the stream without emitting, so
+      // firstValueFrom needs a defaultValue or it rejects with EmptyError.
       const settled = firstValueFrom(
-        this.events.on(
-          taskApiEvents.taskCreatedSuccess,
-          taskApiEvents.taskCreatedFailure
-        )
+        this.events
+          .on(
+            taskApiEvents.taskCreatedSuccess,
+            taskApiEvents.taskCreatedFailure
+          )
+          .pipe(takeUntilDestroyed(this.destroyRef)),
+        { defaultValue: null }
       );
 
       console.log('[Component] Dispatching: taskCreated', f().value());
@@ -84,6 +91,10 @@ export class TaskBoardComponent {
       });
 
       const outcome = await settled;
+      if (outcome === null) {
+        // The component went away before the store answered.
+        return undefined;
+      }
       if (outcome.type === taskApiEvents.taskCreatedFailure.type) {
         return {
           kind: 'server',
