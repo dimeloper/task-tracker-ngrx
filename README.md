@@ -10,9 +10,21 @@ A modern task management application built with Angular and NgRx Signals Events,
 - Comprehensive test coverage with Vitest
 - Detailed logging for debugging and monitoring
 
+## Versions
+
+Each article in the series ships against a tag, so the code you are reading
+matches the post you came from.
+
+| Tag                   | Article                                              |
+| --------------------- | ---------------------------------------------------- |
+| `v1.0.0-method-based` | Using NgRx Signal Store for State Management         |
+| `v2.0.0-event-based`  | Event-Driven State Management with NgRx Signal Store |
+| `v3.0.0-signal-forms` | Building Angular Forms with Signal Forms and NgRx    |
+
 ## Tech Stack
 
-- Angular 20+
+- Angular 22+
+- Angular Signal Forms (`@angular/forms/signals`)
 - NgRx Signals with Events plugin for state management
 - RxJS for reactive programming
 - Vitest for testing
@@ -163,8 +175,34 @@ export class TaskBoardComponent {
     this.dispatch.opened(); // Triggers task loading
   }
 
-  createTask() {
-    this.dispatch.taskCreated(newTask); // Dispatches creation event
+  // submit() awaits its action, but dispatching an event returns nothing, so the
+  // outcome is awaited off the event stream. Subscribe before dispatching.
+  async createTask(event: Event) {
+    event.preventDefault();
+
+    await submit(this.taskForm, async f => {
+      const settled = firstValueFrom(
+        this.events.on(
+          taskApiEvents.taskCreatedSuccess,
+          taskApiEvents.taskCreatedFailure
+        )
+      );
+
+      this.dispatch.taskCreated({ ...f().value(), status: TaskStatus.TODO });
+
+      const outcome = await settled;
+      if (outcome.type === taskApiEvents.taskCreatedFailure.type) {
+        // Routed onto the title field, not just logged.
+        return {
+          kind: 'server',
+          message: String(outcome.payload),
+          fieldTree: f.title,
+        };
+      }
+
+      this.taskForm().reset({ title: '', description: '' });
+      return undefined;
+    });
   }
 }
 ```
@@ -306,12 +344,6 @@ The application uses Vitest for testing, with comprehensive test coverage for:
 ```bash
 # Run all tests
 pnpm test
-
-# Run tests in watch mode
-pnpm test:watch
-
-# Run tests with coverage
-pnpm test:coverage
 ```
 
 ## Development
