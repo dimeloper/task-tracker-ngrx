@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { Events, withEffects } from '@ngrx/signals/events';
+import { Events, withEventHandlers } from '@ngrx/signals/events';
 import { signalStoreFeature } from '@ngrx/signals';
 import { exhaustMap, tap, catchError, concatMap } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -9,7 +9,7 @@ import { Task } from '../../interfaces/task';
 
 export function withTaskEffects() {
   return signalStoreFeature(
-    withEffects(
+    withEventHandlers(
       (
         // Store type is dynamically composed, using Record for flexibility
         store: Record<string, unknown>,

@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { Events, withEffects } from '@ngrx/signals/events';
+import { Events, withEventHandlers } from '@ngrx/signals/events';
 import { signalStoreFeature } from '@ngrx/signals';
 import { tap } from 'rxjs/operators';
 
@@ -27,27 +27,29 @@ interface EventWithPayload {
  */
 export function withEventLogging(eventGroups: EventGroup[]) {
   return signalStoreFeature(
-    withEffects((store: Record<string, unknown>, events = inject(Events)) => {
-      // Collect all events from all groups
-      // Using unknown[] since event creators from NGRX Signals have complex generic types
-      const allEvents = eventGroups.flatMap(group =>
-        Object.values(group)
-      ) as unknown[];
+    withEventHandlers(
+      (store: Record<string, unknown>, events = inject(Events)) => {
+        // Collect all events from all groups
+        // Using unknown[] since event creators from NGRX Signals have complex generic types
+        const allEvents = eventGroups.flatMap(group =>
+          Object.values(group)
+        ) as unknown[];
 
-      return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        logAllEvents$: events.on(...(allEvents as [any, ...any[]])).pipe(
-          tap((event: EventWithPayload) => {
-            const isError = event.type.includes('Failure');
+        return {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          logAllEvents$: events.on(...(allEvents as [any, ...any[]])).pipe(
+            tap((event: EventWithPayload) => {
+              const isError = event.type.includes('Failure');
 
-            if (isError) {
-              console.error(`[Event → Effect] ${event.type}:`, event.payload);
-            } else {
-              console.log(`[Event → Effect] ${event.type}`, event.payload);
-            }
-          })
-        ),
-      };
-    })
+              if (isError) {
+                console.error(`[Event → Effect] ${event.type}:`, event.payload);
+              } else {
+                console.log(`[Event → Effect] ${event.type}`, event.payload);
+              }
+            })
+          ),
+        };
+      }
+    )
   );
 }
