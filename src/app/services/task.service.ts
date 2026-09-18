@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { delay, tap } from 'rxjs/operators';
 import { Task } from '../interfaces/task';
 import { HOUSEHOLD_TASKS } from '../mocks/household-tasks';
@@ -54,6 +54,20 @@ export class TaskService {
     // Body: { title: string, description: string, status: string, ... }
     // Returns: Task (with id and createdAt)
     // return this.http.post<Task>(this.API_URL, task);
+
+    // A real POST /tasks would reject a duplicate title server-side. Simulating it
+    // here gives the form a failure that only the server can know about, which is
+    // the case Signal Forms routes back onto a specific field.
+    const duplicate = this.MOCK_DATA.some(
+      existing =>
+        existing.title.toLowerCase() === task.title.trim().toLowerCase()
+    );
+    if (duplicate) {
+      console.log('[Service - Response] Duplicate title rejected', task.title);
+      return throwError(() => ({
+        message: 'A task with this title already exists',
+      })).pipe(delay(200));
+    }
 
     const newTask: Task = {
       ...task,
