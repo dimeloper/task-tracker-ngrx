@@ -24,3 +24,115 @@ body {
   line-height: 1.5;
   color: #333;
 }
+
+// Buttons and form controls are shared by the board and the task editor, so
+// they live here rather than in either component's encapsulated styles.
+%button-base {
+  border: none;
+  border-radius: 4px;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background-color: #6c757d !important;
+    color: #fff !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: none;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+@mixin button-variant($background, $hover, $focus-ring) {
+  @extend %button-base;
+  background: $background;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: $hover;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px $focus-ring;
+  }
+}
+
+.button-primary {
+  @include button-variant(#28a745, #218838, rgba(40, 167, 69, 0.25));
+}
+
+.button-secondary {
+  @include button-variant(#007bff, #0056b3, rgba(0, 123, 255, 0.25));
+}
+
+.button-danger {
+  @include button-variant(#dc3545, #c82333, rgba(220, 53, 69, 0.25));
+}
+
+.form-control {
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  }
+
+  &.ng-invalid.ng-touched {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+  }
+}
+
+textarea.form-control {
+  resize: vertical;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  span {
+    display: block;
+    padding-left: 0.5rem;
+    position: relative;
+
+    &::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+    }
+  }
+}

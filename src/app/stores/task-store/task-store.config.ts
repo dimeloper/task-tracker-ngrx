@@ -7,9 +7,11 @@ export const TASK_BOARD_INITIAL_STATE = new InjectionToken<TaskBoardState>(
     providedIn: 'root',
     factory: () => ({
       isLoading: false,
+      error: null,
       pageSize: 10,
       pageCount: 1,
       currentPage: 1,
+      taskEdit: null,
     }),
   }
 );

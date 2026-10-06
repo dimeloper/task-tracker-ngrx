@@ -5,7 +5,10 @@ A modern task management application built with Angular and NgRx Signals Events,
 ## Features
 
 - Task management with three states: Todo, In Progress, and Done
+- Create and edit tasks with Signal Forms, including server-side validation
 - Event-driven architecture using NgRx Signals Events
+- Awaitable mutations for the forms, so a form knows when its save succeeded
+- Optimistic status moves with rollback, and paging
 - Unidirectional data flow following Flux principles
 - Comprehensive test coverage with Vitest
 - Detailed logging for debugging and monitoring
@@ -15,17 +18,19 @@ A modern task management application built with Angular and NgRx Signals Events,
 Each article in the series ships against a tag, so the code you are reading
 matches the post you came from.
 
-| Tag                   | Article                                              |
-| --------------------- | ---------------------------------------------------- |
-| `v1.0.0-method-based` | Using NgRx Signal Store for State Management         |
-| `v2.0.0-event-based`  | Event-Driven State Management with NgRx Signal Store |
-| `v3.0.0-signal-forms` | Building Angular Forms with Signal Forms and NgRx    |
+| Tag                             | Article                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `v1.0.0-method-based`           | Using NgRx Signal Store for State Management                                          |
+| `v2.0.0-event-based`            | Event-Driven State Management with NgRx Signal Store                                  |
+| `v3.0.0-signal-forms`           | Signal Forms Meet an Event-Driven NgRx Signal Store (first attempt: the event bridge) |
+| `v4.0.0-signal-forms-mutations` | Signal Forms Meet an Event-Driven NgRx Signal Store (mutations and the edit form)     |
 
 ## Tech Stack
 
 - Angular 22+
 - Angular Signal Forms (`@angular/forms/signals`)
 - NgRx Signals with Events plugin for state management
+- `@angular-architects/ngrx-toolkit` for mutations (`withMutations`, `rxMutation`)
 - RxJS for reactive programming
 - Vitest for testing
 - SCSS for styling
@@ -53,17 +58,26 @@ Events are organized into two groups representing different sources:
 **Page Events** (`taskPageEvents`): User interactions from the UI
 
 - `opened`: Page initialization
-- `taskCreated`: User creates a new task
 - `taskDeleted`: User deletes a task
 - `taskStatusChanged`: User moves a task between columns
 - `pageChanged`: User navigates to a different page
+- `errorDismissed`: User closes the error banner
+
+Creating and editing a task are not page events. The forms need to await the
+outcome, which a dispatched event can't give them, so they call mutations on the
+store instead (see [Forms and the store](#forms-and-the-store)).
 
 **API Events** (`taskApiEvents`): Results from API operations
 
 - `tasksLoadedSuccess/Failure`: Task list fetch results
-- `taskCreatedSuccess/Failure`: Task creation results
+- `taskCreatedSuccess/Failure`: Task creation results (dispatched by the `createTask` mutation)
+- `taskUpdatedSuccess/Failure`: Task edit results (dispatched by the `saveTaskEdit` mutation)
 - `taskDeletedSuccess/Failure`: Task deletion results
 - `taskStatusChangedSuccess/Failure`: Status update results
+
+Because the mutations report their outcome as API events too, the reducer is
+still the only code that changes the tasks, and the event log still shows every
+result.
 
 #### Data Flow
 
@@ -129,87 +143,148 @@ on(taskApiEvents.tasksLoadedSuccess, event => [
 ]);
 ```
 
-**withTaskEffects**: Side effect handlers for asynchronous operations
+**withTaskEffects**: Side effect handlers for asynchronous operations. Each one
+picks its flattening operator on purpose:
 
 ```typescript
-loadTasks$: events
-  .on(taskPageEvents.opened)
-  .pipe(
-    exhaustMap(() =>
-      taskService
-        .getTasks(1, 10)
-        .pipe(
-          concatMap(response =>
-            of(taskApiEvents.tasksLoadedSuccess(response.tasks))
-          )
-        )
+// switchMap: only the page asked for last matters
+loadTasks$: events.on(taskPageEvents.opened, taskPageEvents.pageChanged).pipe(
+  switchMap(() =>
+    taskService.getTasks(store.currentPage(), store.pageSize()).pipe(
+      map(page => taskApiEvents.tasksLoadedSuccess(page)),
+      catchError(error => of(taskApiEvents.tasksLoadedFailure(error.message)))
     )
-  );
+  )
+);
+
+// One queue per task: moves of one card reach the server in order,
+// moves of different cards don't wait on each other, and none is dropped
+changeTaskStatus$: events.on(taskPageEvents.taskStatusChanged).pipe(
+  groupBy(event => event.payload.id),
+  mergeMap(movesOfOneTask => movesOfOneTask.pipe(concatMap(/* request */)))
+);
 ```
 
 **withComputed**: Derived state based on entities
 
 ```typescript
 tasksTodo: computed(() =>
-  store.taskEntities().filter(t => t.status === TaskStatus.TODO)
+  taskEntities().filter(t => t.status === TaskStatus.TODO)
 );
 ```
 
-**withEventLogging**: Reusable feature for logging all events (for debugging)
+**withTaskForms**: What the create and edit forms call: the edit draft's
+methods, and the two mutations
 
 ```typescript
-withEventLogging([taskPageEvents, taskApiEvents]);
+withMutations(store => ({
+  createTask: rxMutation<TaskDraft, Task>({
+    operation: draft =>
+      store._taskService.createTask({ ...draft, status: TaskStatus.TODO }),
+    onSuccess: task =>
+      store._dispatcher.dispatch(taskApiEvents.taskCreatedSuccess(task)),
+    onError: error =>
+      store._dispatcher.dispatch(
+        taskApiEvents.taskCreatedFailure(errorMessage(error))
+      ),
+  }),
+  saveTaskEdit: rxMutation<TaskEdit, Task>({/* same shape */}),
+}));
 ```
 
-This feature automatically logs all events from the specified event groups, using `Object.values()` to include all events without manual enumeration. It's a composable feature that can be added to any store.
+The reducer, effects and forms features declare the state they need
+(`signalStoreFeature({ state: type<…>() }, …)`), so each takes an unused
+generic: `withTaskReducer<_>()`. Without it, `signalStore()` can fail with "No
+overload matches this call". This is a
+[known TypeScript issue](https://ngrx.io/guide/signals/signal-store/custom-store-features#known-typescript-issues)
+that NgRx documents, and `@ngrx/eslint-plugin`'s
+`signal-store-feature-should-use-generic-type` rule (enabled in
+`eslint.config.js`) enforces the fix.
 
 ### Component Integration
 
-Components use `injectDispatch` to dispatch events without directly calling store methods:
+Components dispatch events for the board, and call mutations for the forms:
 
 ```typescript
 export class TaskBoardComponent {
+  readonly store = inject(TaskStore);
   readonly dispatch = injectDispatch(taskPageEvents);
 
   constructor() {
     this.dispatch.opened(); // Triggers task loading
   }
 
-  // submit() awaits its action, but dispatching an event returns nothing, so the
-  // outcome is awaited off the event stream. Subscribe before dispatching.
-  async createTask(event: Event) {
-    event.preventDefault();
-
-    await submit(this.taskForm, async f => {
-      const settled = firstValueFrom(
-        this.events.on(
-          taskApiEvents.taskCreatedSuccess,
-          taskApiEvents.taskCreatedFailure
-        )
-      );
-
-      this.dispatch.taskCreated({ ...f().value(), status: TaskStatus.TODO });
-
-      const outcome = await settled;
-      if (outcome.type === taskApiEvents.taskCreatedFailure.type) {
-        // Routed onto the title field, not just logged.
-        return {
-          kind: 'server',
-          message: String(outcome.payload),
-          fieldTree: f.title,
-        };
-      }
-
-      this.taskForm().reset({ title: '', description: '' });
-      return undefined;
+  moveTo(task: Task, status: TaskStatus) {
+    this.dispatch.taskStatusChanged({
+      id: task.id,
+      status,
+      previousStatus: task.status,
     });
   }
 }
 ```
 
+### Forms and the store
+
+This follows the approach the NgRx team recommends for Signal Forms with
+SignalStore ([ngrx/platform#5053](https://github.com/ngrx/platform/discussions/5053)),
+with mutations for saving as described in
+[Full-Cycle Reactivity in Angular](https://www.angulararchitects.io/en/blog/full-cycle-reativity-in-angular-signal-forms-signal-store-resources-mutation-api/).
+
+**Saving: await a mutation.** `submit()` wants an action it can await, and a
+mutation resolves to `{ status: 'success' | 'error' | 'aborted' }`. An error goes
+straight onto the title field:
+
+```typescript
+async createTask(event: Event) {
+  event.preventDefault();
+
+  await submit(this.taskForm, async f => {
+    const result = await this.store.createTask(f().value());
+
+    if (result.status === 'error') {
+      return {
+        kind: 'server',
+        message: errorMessage(result.error),
+        fieldTree: f.title,
+      };
+    }
+
+    this.taskForm().reset({ title: '', description: '' });
+    return undefined;
+  });
+}
+```
+
+**Creating: local state.** A new task has nothing in the store to start from,
+so the create form's model is a plain `signal` in the component.
+
+**Editing: `linkedSignal` with `set`.** `form()` needs a writable signal, and
+store state is read-only outside the store. A `linkedSignal` reads the draft
+from the store, and its `set` option (Angular 22.1+) sends every write back to a
+store method. The form never keeps its own copy:
+
+```typescript
+readonly edit = linkedSignal(() => this.store.taskEdit() ?? NO_EDIT, {
+  set: edit => this.store.updateTaskEdit(edit),
+});
+
+readonly editForm = form(this.edit, path => {
+  apply(path.title, taskTitleSchema);
+});
+```
+
+Saving the edit is the `saveTaskEdit` mutation; on success the reducer applies
+the change and closes the editor. Both forms share one title rule,
+`taskTitleSchema`.
+
+The draft methods (`startEditing`, `updateTaskEdit`, `stopEditing`) are plain
+store methods rather than events: they fire on every keystroke and change
+nothing but the draft, so an event each would bury the event log.
+
 ### Benefits of This Architecture
 
-- **Predictable State Updates**: All state changes flow through reducers
+- **Predictable State Updates**: Every change to the tasks flows through the reducer
 - **Separation of Concerns**: Effects handle side effects, reducers handle state
 - **Testability**: Pure functions and isolated effects are easy to test
 - **Debugging**: Event logs provide clear audit trail of state changes
@@ -221,15 +296,18 @@ export class TaskBoardComponent {
 ```text
 src/
 ├── app/
+│   ├── forms/
+│   │   └── task-title.schema.ts # Title rule shared by both forms
 │   ├── interfaces/          # TypeScript interfaces
-│   │   └── task.ts         # Task and TaskStatus definitions
+│   │   └── task.ts         # Task, TaskStatus, drafts and board state
 │   ├── mocks/              # Mock data for development
 │   │   └── household-tasks.ts
 │   ├── pages/              # Page components
 │   │   └── task-board/
 │   │       ├── task-board.component.ts   # Main UI component
 │   │       ├── task-board.component.html # Template
-│   │       └── task-board.component.scss # Styles
+│   │       ├── task-board.component.scss # Styles
+│   │       └── task-edit/                # In-place edit form for a task
 │   ├── services/           # Angular services
 │   │   └── task.service.ts # API service (currently using mocks)
 │   └── stores/             # NgRx Signal stores
@@ -239,6 +317,7 @@ src/
 │           ├── task.events.ts       # Event definitions
 │           ├── task.reducer.ts      # State update logic
 │           ├── task.effects.ts      # Side effect handlers
+│           ├── task.forms.ts        # Edit draft methods and mutations
 │           ├── task.store.ts        # Store composition
 │           └── task-store.config.ts # Initial state configuration
 ```
@@ -252,8 +331,8 @@ The application includes comprehensive logging to visualize the complete event f
 ```text
 [Component] Dispatching: [event name]    - Event dispatched from UI component
 [Event → Reducer] [description]          - Event being processed by reducer (synchronous)
+[Component] Creating task                - Create form calling the mutation
 [Event → Effect] [event group] [event]   - Event reaching effects (asynchronous)
-[Effect] [description]                   - Effect internal operations
 [Service - Response] [description]       - API/Service responses
 ```
 
@@ -303,15 +382,13 @@ The `withEventLogging` feature automatically:
 
 3. [Event → Effect] [Task Page] opened                      (Event logger)
 
-4. [Effect] Response from getTasks                          (Service responds)
-   {tasks: [...], totalPages: 1}
+4. [Service - Response] Tasks fetched                       (Service responds)
+   {count: 7, totalPages: 1}
 
-5. [Effect] Dispatching tasksLoadedSuccess                  (Effect dispatches result)
+5. [Event → Reducer] Tasks loaded successfully              (State updated with tasks)
+   {count: 7, totalPages: 1}
 
-6. [Event → Reducer] Tasks loaded successfully              (State updated with tasks)
-   {count: 10, taskIds: ['1', '2', ...]}
-
-7. [Event → Effect] [Task API] tasksLoadedSuccess           (Success event logged)
+6. [Event → Effect] [Task API] tasksLoadedSuccess           (Success event logged)
 ```
 
 This logging pattern makes it easy to trace the complete lifecycle of any user action through the system and understand the order of execution in the Flux architecture.
@@ -329,15 +406,15 @@ The application uses Vitest for testing, with comprehensive test coverage for:
 
 ### Test Structure
 
-**Store Tests** (`task.store.spec.ts`): Verify store initialization, signals, and computed values
+**Store Tests** (`task.store.spec.ts`): The whole store against a stubbed service: loading, paging, the mutations, editing, deleting and rollback
 
-**Reducer Tests** (`task.reducer.spec.ts`): Test pure state update functions
+**Reducer Tests** (`task.reducer.spec.ts`): Events in, state out, with no effects or service
 
-**Effects Tests** (`task.effects.spec.ts`): Test asynchronous operations and event dispatching
+**Effects Tests** (`task.effects.spec.ts`): Which API events each effect produces, including what happens to clicks that arrive mid-request
 
 **Service Tests** (`task.service.spec.ts`): Test API operations and data transformations
 
-**Component Tests**: Test UI behavior and event dispatching
+**Component Tests**: The create form, the edit form's link to the store, and the board
 
 ### Running Tests
 

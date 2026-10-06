@@ -1,0 +1,16 @@
+.task-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+
+    button {
+      padding: 0.4rem 0.7rem;
+      font-size: 0.8rem;
+    }
+  }
+}

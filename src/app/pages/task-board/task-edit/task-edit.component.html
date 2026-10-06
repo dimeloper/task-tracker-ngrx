@@ -1,0 +1,33 @@
+<form class="task-edit" (submit)="save($event)" novalidate>
+  <input
+    type="text"
+    [formField]="editForm.title"
+    aria-label="Task title"
+    class="form-control" />
+  @if (editForm.title().touched() && editForm.title().invalid()) {
+    <div class="error-message">
+      @for (error of editForm.title().errors(); track error.kind) {
+        <span>{{ error.message }}</span>
+      }
+    </div>
+  }
+  <textarea
+    [formField]="editForm.description"
+    aria-label="Task description"
+    class="form-control"></textarea>
+  <div class="actions">
+    <button type="button" (click)="cancel()" class="button-secondary">
+      Cancel
+    </button>
+    <button
+      type="submit"
+      [disabled]="editForm().invalid() || isSaving()"
+      class="button-primary">
+      @if (isSaving()) {
+        Saving...
+      } @else {
+        Save
+      }
+    </button>
+  </div>
+</form>

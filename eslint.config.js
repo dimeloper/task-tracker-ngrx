@@ -2,6 +2,7 @@
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
+const ngrx = require('@ngrx/eslint-plugin');
 
 module.exports = tseslint.config(
   {
@@ -11,9 +12,18 @@ module.exports = tseslint.config(
       ...tseslint.configs.recommended,
       ...tseslint.configs.stylistic,
       ...angular.configs.tsRecommended,
+      // Includes signal-store-feature-should-use-generic-type: a custom feature
+      // that declares an input without a generic parameter can make
+      // signalStore() fail with "No overload matches this call".
+      ...ngrx.configs.signals,
     ],
     processor: angular.processInlineTemplates,
     rules: {
+      // The unused generic NgRx asks custom store features for is named `_`.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_$' },
+      ],
       '@angular-eslint/directive-selector': [
         'error',
         {

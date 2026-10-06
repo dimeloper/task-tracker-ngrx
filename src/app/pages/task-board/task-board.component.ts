@@ -1,51 +1,52 @@
-import { Component, DestroyRef, inject, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  form,
-  FormField,
-  minLength,
-  required,
-  submit,
-} from '@angular/forms/signals';
-import { Events, injectDispatch } from '@ngrx/signals/events';
-import { firstValueFrom } from 'rxjs';
+import { Component, inject, signal } from '@angular/core';
+import { apply, form, FormField, submit } from '@angular/forms/signals';
+import { injectDispatch } from '@ngrx/signals/events';
 import { TaskStore } from '../../stores/task-store/task.store';
-import { Task, TaskStatus } from '../../interfaces/task';
-import {
-  taskApiEvents,
-  taskPageEvents,
-} from '../../stores/task-store/task.events';
+import { errorMessage } from '../../stores/task-store/task.forms';
+import { taskPageEvents } from '../../stores/task-store/task.events';
+import { taskTitleSchema } from '../../forms/task-title.schema';
+import { Task, TaskDraft, TaskStatus } from '../../interfaces/task';
+import { TaskEditComponent } from './task-edit/task-edit.component';
 
-const EMPTY_DRAFT = { title: '', description: '' };
+const EMPTY_DRAFT: TaskDraft = { title: '', description: '' };
 
 @Component({
   selector: 'app-task-board',
-  imports: [FormField],
+  imports: [FormField, TaskEditComponent],
   templateUrl: './task-board.component.html',
   styleUrls: ['./task-board.component.scss'],
 })
 export class TaskBoardComponent {
   readonly store = inject(TaskStore);
   readonly dispatch = injectDispatch(taskPageEvents);
-  private readonly events = inject(Events);
-  private readonly destroyRef = inject(DestroyRef);
 
-  // Expose TaskStatus enum to template
-  readonly TaskStatus = TaskStatus;
+  readonly todo = this.store.tasksTodo;
+  readonly inProgress = this.store.tasksInProgress;
+  readonly done = this.store.tasksDone;
 
-  readonly todo: Signal<Task[]> = this.store.tasksTodo;
-  readonly inProgress: Signal<Task[]> = this.store.tasksInProgress;
-  readonly done: Signal<Task[]> = this.store.tasksDone;
-  readonly isLoading = this.store.isLoading;
+  /** Each column, with the move its cards offer (Done has none). */
+  readonly columns = [
+    {
+      title: 'To Do',
+      tasks: this.todo,
+      next: { label: 'Start', status: TaskStatus.IN_PROGRESS },
+    },
+    {
+      title: 'In Progress',
+      tasks: this.inProgress,
+      next: { label: 'Complete', status: TaskStatus.DONE },
+    },
+    { title: 'Done', tasks: this.done, next: null },
+  ];
 
-  /** The form's model. Signal Forms writes straight back into this signal. */
+  /**
+   * The create form's model. A new task has nothing in the store to start
+   * from, so the draft is plain local state; Signal Forms writes into it.
+   */
   readonly draft = signal({ ...EMPTY_DRAFT });
 
   readonly taskForm = form(this.draft, path => {
-    required(path.title, { message: 'Title is required' });
-    minLength(path.title, 3, {
-      message: 'Title must be at least 3 characters',
-    });
+    apply(path.title, taskTitleSchema);
   });
 
   constructor() {
@@ -56,49 +57,20 @@ export class TaskBoardComponent {
   }
 
   /**
-   * `submit()` wants an action it can await, and it routes whatever errors that
-   * action returns onto the fields. The store speaks events instead: dispatching
-   * `taskCreated` returns nothing, and the outcome shows up later as a separate
-   * `taskCreatedSuccess` or `taskCreatedFailure`.
-   *
-   * So we bridge the two — subscribe to the outcome first, dispatch, then await.
-   * Subscribing before dispatching is the part that matters: `events.on()` is a
-   * hot stream, so an effect that resolves synchronously would land before the
-   * subscription did and the promise would never settle.
+   * createTask is a mutation on the store, so it can be awaited: it resolves to
+   * success or error, and submit() turns an error into a message on the title.
    */
   async createTask(event: Event) {
     event.preventDefault();
 
     await submit(this.taskForm, async f => {
-      // takeUntilDestroyed stops the subscription outliving the component if it
-      // is torn down mid-submit. That completes the stream without emitting, so
-      // firstValueFrom needs a defaultValue or it rejects with EmptyError.
-      const settled = firstValueFrom(
-        this.events
-          .on(
-            taskApiEvents.taskCreatedSuccess,
-            taskApiEvents.taskCreatedFailure
-          )
-          .pipe(takeUntilDestroyed(this.destroyRef)),
-        { defaultValue: null }
-      );
+      console.log('[Component] Creating task', f().value());
+      const result = await this.store.createTask(f().value());
 
-      console.log('[Component] Dispatching: taskCreated', f().value());
-      this.dispatch.taskCreated({
-        title: f.title().value(),
-        description: f.description().value(),
-        status: TaskStatus.TODO,
-      });
-
-      const outcome = await settled;
-      if (outcome === null) {
-        // The component went away before the store answered.
-        return undefined;
-      }
-      if (outcome.type === taskApiEvents.taskCreatedFailure.type) {
+      if (result.status === 'error') {
         return {
           kind: 'server',
-          message: String(outcome.payload),
+          message: errorMessage(result.error),
           fieldTree: f.title,
         };
       }
@@ -111,6 +83,10 @@ export class TaskBoardComponent {
     });
   }
 
+  isEditing(task: Task): boolean {
+    return this.store.taskEdit()?.id === task.id;
+  }
+
   deleteTask(taskId: string) {
     if (confirm('Are you sure you want to delete this task?')) {
       // Dispatch event: handled by effects and reducer
@@ -118,22 +94,19 @@ export class TaskBoardComponent {
       this.dispatch.taskDeleted(taskId);
     }
   }
-  moveTo(taskId: string, targetStatus: TaskStatus) {
-    // Capture current status before dispatching for potential rollback
-    const task = this.store.taskEntities().find(t => t.id === taskId);
-    const previousStatus = task?.status;
 
+  moveTo(task: Task, targetStatus: TaskStatus) {
     // Dispatch event: optimistic update by reducer
     // Effects handle API call and revert on failure
     console.log('[Component] Dispatching: taskStatusChanged', {
-      id: taskId,
+      id: task.id,
       status: targetStatus,
-      previousStatus,
+      previousStatus: task.status,
     });
     this.dispatch.taskStatusChanged({
-      id: taskId,
+      id: task.id,
       status: targetStatus,
-      previousStatus: previousStatus!,
+      previousStatus: task.status,
     });
   }
 }

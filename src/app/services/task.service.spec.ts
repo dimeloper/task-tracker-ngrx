@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TaskService } from './task.service';
-import { Task } from '../interfaces/task';
+import { Task, TaskStatus } from '../interfaces/task';
 import { firstValueFrom } from 'rxjs';
 
 describe('TaskService', () => {
@@ -142,5 +142,76 @@ describe('TaskService', () => {
 
       expect(result).toBe(true);
     });
+  });
+
+  describe('updateTask', () => {
+    it('saves the new title and description and returns the saved task', async () => {
+      const saved = await firstValueFrom(
+        service.updateTask('1', {
+          title: 'Clean the whole kitchen',
+          description: 'Oven too',
+        })
+      );
+
+      expect(saved).toMatchObject({
+        id: '1',
+        title: 'Clean the whole kitchen',
+        description: 'Oven too',
+      });
+      const page = await firstValueFrom(service.getTasks(1, 100));
+      expect(page.tasks.find(t => t.id === '1')?.title).toBe(
+        'Clean the whole kitchen'
+      );
+    });
+
+    it('lets a task keep its own title', async () => {
+      const saved = await firstValueFrom(
+        service.updateTask('1', {
+          title: 'Clean the kitchen',
+          description: 'Only the description changed',
+        })
+      );
+
+      expect(saved.description).toBe('Only the description changed');
+    });
+
+    it("rejects another task's title", async () => {
+      // '1' is "Clean the kitchen" in HOUSEHOLD_TASKS
+      const other = (await firstValueFrom(service.getTasks(1, 100))).tasks.find(
+        t => t.id !== '1'
+      )!;
+
+      await expect(
+        firstValueFrom(
+          service.updateTask(other.id, {
+            title: 'clean the KITCHEN',
+            description: '',
+          })
+        )
+      ).rejects.toEqual({ message: 'A task with this title already exists' });
+    });
+
+    it('rejects a task that does not exist', async () => {
+      await expect(
+        firstValueFrom(
+          service.updateTask('non-existent-id', {
+            title: 'Ghost',
+            description: '',
+          })
+        )
+      ).rejects.toEqual({ message: 'This task no longer exists' });
+    });
+  });
+
+  it('never reuses the id of a task that is still there after a delete', async () => {
+    await firstValueFrom(service.deleteTask('1'));
+    const created = await firstValueFrom(
+      service.createTask({ title: 'Brand new', status: TaskStatus.TODO })
+    );
+
+    const ids = (await firstValueFrom(service.getTasks(1, 100))).tasks.map(
+      t => t.id
+    );
+    expect(ids.filter(id => id === created.id)).toHaveLength(1);
   });
 });

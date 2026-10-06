@@ -1,16 +1,13 @@
-import { signalStore, withState, withComputed, type } from '@ngrx/signals';
+import { signalStore, withComputed, withState, type } from '@ngrx/signals';
 import { withEntities } from '@ngrx/signals/entities';
-import { computed, inject, Signal } from '@angular/core';
+import { computed, inject } from '@angular/core';
 import { Task, TaskStatus } from '../../interfaces/task';
 import { TASK_BOARD_INITIAL_STATE } from './task-store.config';
 import { withTaskReducer } from './task.reducer';
 import { withTaskEffects } from './task.effects';
+import { withTaskForms } from './task.forms';
 import { taskPageEvents, taskApiEvents } from './task.events';
 import { withEventLogging } from '../shared/with-event-logging';
-
-interface TaskStoreState {
-  taskEntities: Signal<Task[]>;
-}
 
 export const TaskStore = signalStore(
   { providedIn: 'root' },
@@ -21,6 +18,19 @@ export const TaskStore = signalStore(
   // State
   withState(() => inject(TASK_BOARD_INITIAL_STATE)),
 
+  // Computed views
+  withComputed(({ taskEntities }) => ({
+    tasksTodo: computed(() =>
+      taskEntities().filter(t => t.status === TaskStatus.TODO)
+    ),
+    tasksInProgress: computed(() =>
+      taskEntities().filter(t => t.status === TaskStatus.IN_PROGRESS)
+    ),
+    tasksDone: computed(() =>
+      taskEntities().filter(t => t.status === TaskStatus.DONE)
+    ),
+  })),
+
   // Event-driven reducers
   withTaskReducer(),
 
@@ -30,18 +40,6 @@ export const TaskStore = signalStore(
   // Event logging (for debugging)
   withEventLogging([taskPageEvents, taskApiEvents]),
 
-  // Computed views (unchanged)
-  withComputed((store: TaskStoreState) => ({
-    tasksTodo: computed(() =>
-      store.taskEntities().filter((t: Task) => t.status === TaskStatus.TODO)
-    ),
-    tasksInProgress: computed(() =>
-      store
-        .taskEntities()
-        .filter((t: Task) => t.status === TaskStatus.IN_PROGRESS)
-    ),
-    tasksDone: computed(() =>
-      store.taskEntities().filter((t: Task) => t.status === TaskStatus.DONE)
-    ),
-  }))
+  // What the create and edit forms call
+  withTaskForms()
 );
