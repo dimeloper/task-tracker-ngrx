@@ -13,9 +13,6 @@ const EMPTY_DRAFT: TaskDraft = { title: '', description: '' };
 @Component({
   selector: 'app-task-board',
   imports: [FormField, TaskEditComponent],
-  // The board owns the store: it lives as long as the page, and the task editor
-  // inside the board injects this same instance.
-  providers: [TaskStore],
   templateUrl: './task-board.component.html',
   styleUrls: ['./task-board.component.scss'],
 })

@@ -2,14 +2,21 @@ import { inject } from '@angular/core';
 import {
   patchState,
   signalStoreFeature,
+  type,
   withMethods,
   withProps,
 } from '@ngrx/signals';
+import { NamedEntityState } from '@ngrx/signals/entities';
 import { Dispatcher } from '@ngrx/signals/events';
 import { rxMutation, withMutations } from '@angular-architects/ngrx-toolkit';
-import { Task, TaskDraft, TaskEdit, TaskStatus } from '../../interfaces/task';
+import {
+  Task,
+  TaskBoardState,
+  TaskDraft,
+  TaskEdit,
+  TaskStatus,
+} from '../../interfaces/task';
 import { TaskService } from '../../services/task.service';
-import { taskStoreInput } from './task-store.config';
 import { taskApiEvents } from './task.events';
 
 /** The service rejects with `{ message }`; anything else is stringified. */
@@ -18,9 +25,9 @@ export function errorMessage(error: unknown): string {
   return typeof message === 'string' ? message : String(error);
 }
 
-export function withTaskForms() {
+export function withTaskForms<_>() {
   return signalStoreFeature(
-    taskStoreInput,
+    { state: type<TaskBoardState & NamedEntityState<Task, 'task'>>() },
     withProps(() => ({
       _taskService: inject(TaskService),
       _dispatcher: inject(Dispatcher),

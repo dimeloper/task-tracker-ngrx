@@ -119,9 +119,7 @@ result.
 
 #### Store Structure
 
-The store is composed using feature functions. `TaskBoardComponent` provides
-it (`providers: [TaskStore]`), so it lives as long as the board does, and the
-task editor inside the board injects the same instance.
+The store is composed using feature functions:
 
 **withEntities**: Manages the task collection with CRUD operations
 
@@ -166,7 +164,7 @@ changeTaskStatus$: events.on(taskPageEvents.taskStatusChanged).pipe(
 );
 ```
 
-**withTaskColumns**: Derived state based on entities
+**withComputed**: Derived state based on entities
 
 ```typescript
 tasksTodo: computed(() =>
@@ -193,19 +191,14 @@ withMutations(store => ({
 }));
 ```
 
-The reducer, effects, columns and forms features all declare the same input,
-`taskStoreInput` (in `task-store.config.ts`). `signalStore()` infers each
-feature's types partly from what later features declare they need. When one
-feature asks only for state and another only for props, those guesses disagree,
-and TypeScript reports that no overload matches.
-
-**withEventLogging**: Reusable feature for logging all events (for debugging)
-
-```typescript
-withEventLogging([taskPageEvents, taskApiEvents]);
-```
-
-This feature automatically logs all events from the specified event groups, using `Object.values()` to include all events without manual enumeration. It's a composable feature that can be added to any store.
+The reducer, effects and forms features declare the state they need
+(`signalStoreFeature({ state: type<…>() }, …)`), so each takes an unused
+generic: `withTaskReducer<_>()`. Without it, `signalStore()` can fail with "No
+overload matches this call". This is a
+[known TypeScript issue](https://ngrx.io/guide/signals/signal-store/custom-store-features#known-typescript-issues)
+that NgRx documents, and `@ngrx/eslint-plugin`'s
+`signal-store-feature-should-use-generic-type` rule (enabled in
+`eslint.config.js`) enforces the fix.
 
 ### Component Integration
 
@@ -310,7 +303,7 @@ src/
 │   │   └── household-tasks.ts
 │   ├── pages/              # Page components
 │   │   └── task-board/
-│   │       ├── task-board.component.ts   # Main UI component, provides the store
+│   │       ├── task-board.component.ts   # Main UI component
 │   │       ├── task-board.component.html # Template
 │   │       ├── task-board.component.scss # Styles
 │   │       └── task-edit/                # In-place edit form for a task
@@ -325,7 +318,7 @@ src/
 │           ├── task.effects.ts      # Side effect handlers
 │           ├── task.forms.ts        # Edit draft methods and mutations
 │           ├── task.store.ts        # Store composition
-│           └── task-store.config.ts # Initial state and shared feature input
+│           └── task-store.config.ts # Initial state configuration
 ```
 
 ### Logging System

@@ -6,16 +6,15 @@ import {
   removeEntity,
   updateEntity,
 } from '@ngrx/signals/entities';
-import { taskStoreInput } from './task-store.config';
 import { taskPageEvents, taskApiEvents } from './task.events';
-import { signalStoreFeature } from '@ngrx/signals';
+import { signalStoreFeature, type } from '@ngrx/signals';
 import { Task, TaskBoardState } from '../../interfaces/task';
 
 type TaskStoreState = TaskBoardState & NamedEntityState<Task, 'task'>;
 
-export function withTaskReducer() {
+export function withTaskReducer<_>() {
   return signalStoreFeature(
-    taskStoreInput,
+    { state: type<TaskStoreState>() },
     withReducer<TaskStoreState>(
       // Opening the board and turning the page both (re)load the current page
       on(taskPageEvents.opened, () => {

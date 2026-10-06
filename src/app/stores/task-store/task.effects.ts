@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { Events, withEventHandlers } from '@ngrx/signals/events';
-import { signalStoreFeature } from '@ngrx/signals';
+import { signalStoreFeature, type } from '@ngrx/signals';
 import {
   catchError,
   concatMap,
@@ -11,12 +11,12 @@ import {
 } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { TaskService } from '../../services/task.service';
-import { taskStoreInput } from './task-store.config';
 import { taskPageEvents, taskApiEvents } from './task.events';
+import { TaskBoardState } from '../../interfaces/task';
 
-export function withTaskEffects() {
+export function withTaskEffects<_>() {
   return signalStoreFeature(
-    taskStoreInput,
+    { state: type<TaskBoardState>() },
     withEventHandlers(
       (store, events = inject(Events), taskService = inject(TaskService)) => ({
         // Load the current page when the board opens or the page changes.
