@@ -2,68 +2,39 @@ import { inject } from '@angular/core';
 import { Events, withEventHandlers } from '@ngrx/signals/events';
 import { signalStoreFeature } from '@ngrx/signals';
 import {
-  exhaustMap,
-  tap,
   catchError,
   concatMap,
   groupBy,
+  map,
   mergeMap,
+  switchMap,
 } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { TaskService } from '../../services/task.service';
+import { taskStoreInput } from './task-store.config';
 import { taskPageEvents, taskApiEvents } from './task.events';
-import { Task } from '../../interfaces/task';
 
 export function withTaskEffects() {
   return signalStoreFeature(
+    taskStoreInput,
     withEventHandlers(
-      (
-        // Store type is dynamically composed, using Record for flexibility
-        store: Record<string, unknown>,
-        events = inject(Events),
-        taskService = inject(TaskService)
-      ) => ({
-        // Load tasks when page opens
-        loadTasks$: events.on(taskPageEvents.opened).pipe(
-          exhaustMap(() =>
-            taskService.getTasks(1, 10).pipe(
-              tap(response => {
-                console.log('[Effect] Response from getTasks:', response);
-              }),
-              catchError((error: { message: string }) =>
-                of(taskApiEvents.tasksLoadedFailure(error.message))
-              ),
-              concatMap((response: { tasks: Task[] } | { type: string }) => {
-                if ('type' in response) {
-                  // Already an event (error)
-                  return of(response);
-                }
-                // Dispatch success with tasks array
-                console.log(
-                  '[Effect] Dispatching tasksLoadedSuccess with:',
-                  response.tasks
-                );
-                return of(taskApiEvents.tasksLoadedSuccess(response.tasks));
-              })
-            )
-          )
-        ),
-
-        // Create task
-        createTask$: events.on(taskPageEvents.taskCreated).pipe(
-          exhaustMap(event =>
-            taskService.createTask(event.payload).pipe(
-              catchError((error: { message: string }) =>
-                of(taskApiEvents.taskCreatedFailure(error.message))
-              ),
-              concatMap((task: Task | { type: string }) =>
-                'type' in task
-                  ? of(task)
-                  : of(taskApiEvents.taskCreatedSuccess(task))
+      (store, events = inject(Events), taskService = inject(TaskService)) => ({
+        // Load the current page when the board opens or the page changes.
+        // The reducer has already stored the new page by the time this runs.
+        // switchMap: only the page asked for last matters, so an older page
+        // still loading is cancelled rather than landing on top of it.
+        loadTasks$: events
+          .on(taskPageEvents.opened, taskPageEvents.pageChanged)
+          .pipe(
+            switchMap(() =>
+              taskService.getTasks(store.currentPage(), store.pageSize()).pipe(
+                map(page => taskApiEvents.tasksLoadedSuccess(page)),
+                catchError((error: { message: string }) =>
+                  of(taskApiEvents.tasksLoadedFailure(error.message))
+                )
               )
             )
-          )
-        ),
+          ),
 
         // Delete task
         // mergeMap: deleting one task says nothing about another, so a delete
@@ -71,11 +42,15 @@ export function withTaskEffects() {
         deleteTask$: events.on(taskPageEvents.taskDeleted).pipe(
           mergeMap(event =>
             taskService.deleteTask(event.payload).pipe(
+              map(deleted =>
+                deleted
+                  ? taskApiEvents.taskDeletedSuccess(event.payload)
+                  : taskApiEvents.taskDeletedFailure(
+                      'This task no longer exists'
+                    )
+              ),
               catchError((error: { message: string }) =>
                 of(taskApiEvents.taskDeletedFailure(error.message))
-              ),
-              concatMap(() =>
-                of(taskApiEvents.taskDeletedSuccess(event.payload))
               )
             )
           )
@@ -95,13 +70,11 @@ export function withTaskEffects() {
                 taskService
                   .updateTaskStatus(event.payload.id, event.payload.status)
                   .pipe(
-                    concatMap(() =>
-                      of(
-                        taskApiEvents.taskStatusChangedSuccess({
-                          id: event.payload.id,
-                          status: event.payload.status,
-                        })
-                      )
+                    map(() =>
+                      taskApiEvents.taskStatusChangedSuccess({
+                        id: event.payload.id,
+                        status: event.payload.status,
+                      })
                     ),
                     catchError((error: { message: string }) =>
                       of(

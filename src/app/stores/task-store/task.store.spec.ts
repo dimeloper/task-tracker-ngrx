@@ -1,26 +1,39 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { injectDispatch } from '@ngrx/signals/events';
 import { TaskStore } from './task.store';
 import { TaskService } from '../../services/task.service';
 import { Task, TaskStatus } from '../../interfaces/task';
 import { taskPageEvents } from './task.events';
-import { injectDispatch } from '@ngrx/signals/events';
 
+// The whole store against a stubbed service. The stubs answer synchronously, so
+// events, reducer and effects have all run by the time a dispatch returns.
 describe('TaskStore', () => {
   let store: InstanceType<typeof TaskStore>;
   let dispatch: ReturnType<typeof injectDispatch<typeof taskPageEvents>>;
   let mockTaskService: {
     getTasks: ReturnType<typeof vi.fn>;
     createTask: ReturnType<typeof vi.fn>;
+    updateTask: ReturnType<typeof vi.fn>;
     deleteTask: ReturnType<typeof vi.fn>;
     updateTaskStatus: ReturnType<typeof vi.fn>;
   };
 
+  const task = (overrides: Partial<Task> = {}): Task => ({
+    id: '1',
+    title: 'Water the plants',
+    description: 'Balcony first',
+    status: TaskStatus.TODO,
+    createdAt: '2026-10-06T00:00:00.000Z',
+    ...overrides,
+  });
+
   beforeEach(() => {
     mockTaskService = {
-      getTasks: vi.fn(),
+      getTasks: vi.fn().mockReturnValue(of({ tasks: [task()], totalPages: 1 })),
       createTask: vi.fn(),
+      updateTask: vi.fn(),
       deleteTask: vi.fn(),
       updateTaskStatus: vi.fn(),
     };
@@ -38,311 +51,222 @@ describe('TaskStore', () => {
     );
   });
 
-  describe('Initialization', () => {
-    it('should initialize with correct default state', () => {
-      expect(store.isLoading()).toBe(false);
-      expect(store.pageSize()).toBe(10);
-      expect(store.pageCount()).toBe(1);
-      expect(store.currentPage()).toBe(1);
-      expect(store.taskEntities()).toEqual([]);
-      expect(store.tasksTodo()).toEqual([]);
-      expect(store.tasksInProgress()).toEqual([]);
-      expect(store.tasksDone()).toEqual([]);
-    });
-
-    it('should expose all required signals as functions', () => {
-      const signals = [
-        store.taskEntities,
-        store.isLoading,
-        store.pageSize,
-        store.pageCount,
-        store.currentPage,
-        store.tasksTodo,
-        store.tasksInProgress,
-        store.tasksDone,
-      ];
-
-      signals.forEach(signal => {
-        expect(signal).toBeDefined();
-        expect(typeof signal).toBe('function');
-      });
-    });
+  it('starts empty, on the first page, with nothing being edited', () => {
+    expect(store.taskEntities()).toEqual([]);
+    expect(store.isLoading()).toBe(false);
+    expect(store.error()).toBeNull();
+    expect(store.currentPage()).toBe(1);
+    expect(store.pageSize()).toBe(10);
+    expect(store.taskEdit()).toBeNull();
   });
 
-  describe('Store Composition', () => {
-    it('should be injectable as a root singleton', () => {
-      const store1 = TestBed.inject(TaskStore);
-      const store2 = TestBed.inject(TaskStore);
-
-      expect(store1).toBeDefined();
-      expect(store1).toBe(store);
-      expect(store1).toBe(store2);
-    });
-  });
-
-  describe('Integration: Event Flow', () => {
-    describe('Load Tasks Flow', () => {
-      it('should dispatch opened event and load tasks through complete flow', async () => {
-        // Arrange: Mock service response
-        const mockTasks: Task[] = [
-          {
-            id: '1',
-            title: 'Test Task',
-            status: TaskStatus.TODO,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            title: 'In Progress Task',
-            status: TaskStatus.IN_PROGRESS,
-            createdAt: new Date().toISOString(),
-          },
-        ];
-        mockTaskService.getTasks.mockReturnValue(
-          of({ tasks: mockTasks, totalPages: 1 })
-        );
-
-        // Initial state verification
-        expect(store.taskEntities()).toEqual([]);
-        expect(store.isLoading()).toBe(false);
-
-        // Act: Dispatch page opened event
-        dispatch.opened();
-
-        // Wait for async effects to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Assert: Verify complete flow
-        expect(mockTaskService.getTasks).toHaveBeenCalledWith(1, 10);
-        // Note: Without actual event processing, we verify the effect setup exists
-        // In a real scenario, TestBed.flushEffects() would process the events
-      });
-
-      it('should handle service errors when loading tasks', async () => {
-        // Arrange: Mock service error
-        mockTaskService.getTasks.mockReturnValue(
-          throwError(() => ({ message: 'Network error' }))
-        );
-
-        // Act: Dispatch page opened event
-        dispatch.opened();
-
-        // Wait for async effects
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Assert: Store should remain in safe state
-        expect(store.taskEntities()).toEqual([]);
-      });
-    });
-
-    describe('Create Task Flow', () => {
-      it('should dispatch taskCreated event and create task', async () => {
-        const newTask: Task = {
-          id: '2',
-          title: 'New Task',
-          description: 'Description',
-          status: TaskStatus.TODO,
-          createdAt: new Date().toISOString(),
-        };
-        mockTaskService.createTask.mockReturnValue(of(newTask));
-
-        // Act: Dispatch taskCreated event
-        dispatch.taskCreated({
-          title: newTask.title,
-          description: newTask.description,
-          status: newTask.status,
-        });
-
-        // Wait for async effects
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Assert: Verify service was called
-        expect(mockTaskService.createTask).toHaveBeenCalledWith({
-          title: newTask.title,
-          description: newTask.description,
-          status: newTask.status,
-        });
-      });
-
-      it('should handle task creation errors', async () => {
-        mockTaskService.createTask.mockReturnValue(
-          throwError(() => ({ message: 'Creation failed' }))
-        );
-
-        // Act: Dispatch taskCreated event
-        dispatch.taskCreated({
-          title: 'Test',
-          status: TaskStatus.TODO,
-        });
-
-        // Wait for async effects
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Assert: Store should remain in safe state
-        expect(mockTaskService.createTask).toHaveBeenCalled();
-      });
-    });
-
-    describe('Delete Task Flow', () => {
-      it('should dispatch taskDeleted event', async () => {
-        const taskId = '1';
-        mockTaskService.deleteTask.mockReturnValue(of(void 0));
-
-        // Act: Dispatch taskDeleted event
-        dispatch.taskDeleted(taskId);
-
-        // Wait for async effects
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Assert
-        expect(mockTaskService.deleteTask).toHaveBeenCalledWith(taskId);
-      });
-    });
-
-    describe('Update Task Status Flow', () => {
-      it('should dispatch taskStatusChanged event for optimistic update', async () => {
-        const taskId = '1';
-        const previousStatus = TaskStatus.TODO;
-        const newStatus = TaskStatus.IN_PROGRESS;
-        mockTaskService.updateTaskStatus.mockReturnValue(of(true));
-
-        // Act: Dispatch taskStatusChanged event with previousStatus
-        dispatch.taskStatusChanged({
-          id: taskId,
-          status: newStatus,
-          previousStatus: previousStatus,
-        });
-
-        // Wait for async effects
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Assert: Verify service was called
-        expect(mockTaskService.updateTaskStatus).toHaveBeenCalledWith(
-          taskId,
-          newStatus
-        );
-      });
-
-      it('should handle status update failures and revert to previous status', async () => {
-        // Arrange: Set up initial task state
-        const initialTask: Task = {
-          id: '1',
-          title: 'Test Task',
-          status: TaskStatus.TODO,
-          createdAt: new Date().toISOString(),
-        };
-        const mockTasks: Task[] = [initialTask];
-
-        // Load initial tasks
-        mockTaskService.getTasks.mockReturnValue(
-          of({ tasks: mockTasks, totalPages: 1 })
-        );
-        dispatch.opened();
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Setup: Mock service to fail
-        mockTaskService.updateTaskStatus.mockReturnValue(
-          throwError(() => ({ message: 'Update failed' }))
-        );
-
-        // Act: Try to change status (optimistic update)
-        const newStatus = TaskStatus.DONE;
-        dispatch.taskStatusChanged({
-          id: '1',
-          status: newStatus,
-          previousStatus: initialTask.status, // Capture before change
-        });
-
-        // Wait for async effects
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Assert: Service was called
-        expect(mockTaskService.updateTaskStatus).toHaveBeenCalledWith(
-          '1',
-          newStatus
-        );
-
-        // TODO: In a real scenario with proper event processing,
-        // we would verify that the task status reverted to TaskStatus.TODO
-        // Currently this requires TestBed.flushEffects() or similar mechanism
-      });
-
-      it('should include previousStatus in event payload for rollback capability', () => {
-        // This test ensures the event structure includes previousStatus
-        const previousStatus = TaskStatus.TODO;
-        const newStatus = TaskStatus.IN_PROGRESS;
-
-        // This will fail at compile time if previousStatus is not in the event type
-        const eventPayload: Parameters<typeof dispatch.taskStatusChanged>[0] = {
-          id: '1',
-          status: newStatus,
-          previousStatus: previousStatus,
-        };
-
-        expect(eventPayload.previousStatus).toBe(previousStatus);
-      });
-    });
-  });
-
-  describe('Integration: Computed Signals', () => {
-    it('should filter tasks by status correctly when state changes', () => {
-      // Note: This test demonstrates computed signal behavior
-      // In a real scenario, tasks would be loaded via events
-      expect(store.tasksTodo()).toEqual([]);
-      expect(store.tasksInProgress()).toEqual([]);
-      expect(store.tasksDone()).toEqual([]);
-
-      // Computed signals reactively filter based on entity state
-      expect(store.tasksTodo().length).toBe(0);
-      expect(store.tasksInProgress().length).toBe(0);
-      expect(store.tasksDone().length).toBe(0);
-    });
-  });
-
-  describe('Integration: Optimistic Update with Rollback', () => {
-    it('should demonstrate the bug: effect reads status after reducer optimistically updates it', async () => {
-      // This test demonstrates why the bug occurred:
-      // 1. Reducer updates state optimistically (synchronous)
-      // 2. Effect runs after and reads the ALREADY UPDATED status
-      // 3. When API fails, it tries to revert to the NEW status instead of OLD status
-
-      const initialTask: Task = {
-        id: '3',
-        title: 'Rollback Test Task',
-        status: TaskStatus.TODO, // Original status
-        createdAt: new Date().toISOString(),
-      };
-
-      // Setup: Load initial task
+  describe('loading', () => {
+    it('loads the first page into the columns when the board opens', () => {
       mockTaskService.getTasks.mockReturnValue(
-        of({ tasks: [initialTask], totalPages: 1 })
+        of({
+          tasks: [
+            task(),
+            task({ id: '2', status: TaskStatus.IN_PROGRESS }),
+            task({ id: '3', status: TaskStatus.DONE }),
+          ],
+          totalPages: 2,
+        })
+      );
+
+      dispatch.opened();
+
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(1, 10);
+      expect(store.tasksTodo().map(t => t.id)).toEqual(['1']);
+      expect(store.tasksInProgress().map(t => t.id)).toEqual(['2']);
+      expect(store.tasksDone().map(t => t.id)).toEqual(['3']);
+      expect(store.pageCount()).toBe(2);
+      expect(store.isLoading()).toBe(false);
+    });
+
+    it('loads the page that is asked for', () => {
+      mockTaskService.getTasks.mockReturnValue(
+        of({ tasks: [task({ id: '11' })], totalPages: 2 })
+      );
+
+      dispatch.pageChanged(2);
+
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(2, 10);
+      expect(store.currentPage()).toBe(2);
+      expect(store.taskEntities().map(t => t.id)).toEqual(['11']);
+    });
+
+    it('shows a load failure until it is dismissed', () => {
+      mockTaskService.getTasks.mockReturnValue(
+        throwError(() => ({ message: 'Network error' }))
+      );
+
+      dispatch.opened();
+      expect(store.error()).toBe('Network error');
+      expect(store.isLoading()).toBe(false);
+
+      dispatch.errorDismissed();
+      expect(store.error()).toBeNull();
+    });
+  });
+
+  describe('createTask mutation', () => {
+    it('creates a to-do task and resolves with it', async () => {
+      const created = task({ id: '2', title: 'Fold the laundry' });
+      mockTaskService.createTask.mockReturnValue(of(created));
+      dispatch.opened();
+
+      const result = await store.createTask({
+        title: 'Fold the laundry',
+        description: '',
+      });
+
+      expect(mockTaskService.createTask).toHaveBeenCalledWith({
+        title: 'Fold the laundry',
+        description: '',
+        status: TaskStatus.TODO,
+      });
+      expect(result).toEqual({ status: 'success', value: created });
+      expect(store.tasksTodo().map(t => t.id)).toEqual(['1', '2']);
+    });
+
+    it('resolves with the error, so the form can show it', async () => {
+      mockTaskService.createTask.mockReturnValue(
+        throwError(() => ({ message: 'A task with this title already exists' }))
       );
       dispatch.opened();
-      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Act: Try to change status, but API fails
+      const result = await store.createTask({
+        title: 'Water the plants',
+        description: '',
+      });
+
+      expect(result).toEqual({
+        status: 'error',
+        error: { message: 'A task with this title already exists' },
+      });
+      expect(store.taskEntities()).toHaveLength(1);
+      // The form owns this message; the board does not repeat it.
+      expect(store.error()).toBeNull();
+    });
+  });
+
+  describe('editing', () => {
+    beforeEach(() => dispatch.opened());
+
+    it('starts an edit from the task as it is now', () => {
+      store.startEditing('1');
+      expect(store.taskEdit()).toEqual({
+        id: '1',
+        title: 'Water the plants',
+        description: 'Balcony first',
+      });
+    });
+
+    it('ignores a task it does not have', () => {
+      store.startEditing('missing');
+      expect(store.taskEdit()).toBeNull();
+    });
+
+    it('keeps the draft in the store as it changes, without touching the task', () => {
+      store.startEditing('1');
+      store.updateTaskEdit({
+        id: '1',
+        title: 'Water the herbs',
+        description: '',
+      });
+
+      expect(store.taskEdit()?.title).toBe('Water the herbs');
+      expect(store.taskEntities()[0].title).toBe('Water the plants');
+    });
+
+    it('drops the draft on cancel', () => {
+      store.startEditing('1');
+      store.stopEditing();
+      expect(store.taskEdit()).toBeNull();
+    });
+
+    it('saves the draft, updates the task and closes the editor', async () => {
+      mockTaskService.updateTask.mockReturnValue(
+        of(task({ title: 'Water the herbs', description: '' }))
+      );
+      store.startEditing('1');
+      const edit = { id: '1', title: 'Water the herbs', description: '' };
+
+      const result = await store.saveTaskEdit(edit);
+
+      expect(mockTaskService.updateTask).toHaveBeenCalledWith('1', {
+        title: 'Water the herbs',
+        description: '',
+      });
+      expect(result.status).toBe('success');
+      expect(store.taskEntities()[0].title).toBe('Water the herbs');
+      expect(store.taskEdit()).toBeNull();
+    });
+
+    it('keeps the editor open with the draft when saving fails', async () => {
+      mockTaskService.updateTask.mockReturnValue(
+        throwError(() => ({ message: 'A task with this title already exists' }))
+      );
+      store.startEditing('1');
+      const edit = { id: '1', title: 'Clean the kitchen', description: '' };
+      store.updateTaskEdit(edit);
+
+      const result = await store.saveTaskEdit(edit);
+
+      expect(result.status).toBe('error');
+      expect(store.taskEdit()).toEqual(edit);
+      expect(store.taskEntities()[0].title).toBe('Water the plants');
+    });
+  });
+
+  describe('deleting', () => {
+    beforeEach(() => dispatch.opened());
+
+    it('removes the task once the server confirms', () => {
+      mockTaskService.deleteTask.mockReturnValue(of(true));
+      dispatch.taskDeleted('1');
+      expect(store.taskEntities()).toEqual([]);
+    });
+
+    it('keeps the task and says why when the server has nothing to delete', () => {
+      mockTaskService.deleteTask.mockReturnValue(of(false));
+      dispatch.taskDeleted('1');
+      expect(store.taskEntities()).toHaveLength(1);
+      expect(store.error()).toBe('This task no longer exists');
+    });
+  });
+
+  describe('moving between columns', () => {
+    beforeEach(() => dispatch.opened());
+
+    it('keeps the move when the server accepts it', () => {
+      mockTaskService.updateTaskStatus.mockReturnValue(of(true));
+
+      dispatch.taskStatusChanged({
+        id: '1',
+        status: TaskStatus.IN_PROGRESS,
+        previousStatus: TaskStatus.TODO,
+      });
+
+      expect(store.tasksInProgress().map(t => t.id)).toEqual(['1']);
+      expect(store.error()).toBeNull();
+    });
+
+    it('moves the card back and says why when the server refuses', () => {
       mockTaskService.updateTaskStatus.mockReturnValue(
         throwError(() => ({ message: 'Server error' }))
       );
 
-      // Critical: We must capture previousStatus BEFORE dispatch
-      // because after dispatch, the reducer will have already updated it
-      const capturedPreviousStatus = initialTask.status; // TODO
-
       dispatch.taskStatusChanged({
-        id: '3',
+        id: '1',
         status: TaskStatus.DONE,
-        previousStatus: capturedPreviousStatus, // Must be captured before!
+        // Captured before dispatching: by the time the effect runs, the
+        // reducer has already moved the card, so the store can't tell it.
+        previousStatus: TaskStatus.TODO,
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Expected behavior:
-      // - Task should revert to TaskStatus.TODO (original status)
-      // If previousStatus wasn't captured before dispatch, it would revert to DONE (wrong!)
-
-      // Note: This test documents the requirement that previousStatus
-      // must be captured BEFORE dispatching the event
+      expect(store.tasksTodo().map(t => t.id)).toEqual(['1']);
+      expect(store.error()).toBe('Server error');
     });
   });
 });

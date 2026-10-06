@@ -112,4 +112,33 @@ describe('TaskBoardComponent', () => {
       expect(component.todo().length).toBe(before);
     });
   });
+
+  describe('editing', () => {
+    // The real TaskService answers getTasks after 300ms.
+    const loaded = () => new Promise(resolve => setTimeout(resolve, 350));
+
+    it('opens the editor in place of the card whose Edit was clicked, only that one', async () => {
+      await loaded();
+      fixture.detectChanges();
+      const host: HTMLElement = fixture.nativeElement;
+      const firstCard = host.querySelector('.task')!;
+      const editButton = Array.from(firstCard.querySelectorAll('button')).find(
+        button => button.textContent?.trim() === 'Edit'
+      )!;
+
+      editButton.click();
+      fixture.detectChanges();
+
+      expect(firstCard.querySelector('app-task-edit')).not.toBeNull();
+      expect(host.querySelectorAll('app-task-edit')).toHaveLength(1);
+    });
+
+    it('hides the pager while every task fits on one page', async () => {
+      await loaded();
+      fixture.detectChanges();
+
+      expect(component.store.pageCount()).toBe(1);
+      expect(fixture.nativeElement.querySelector('.pager')).toBeNull();
+    });
+  });
 });

@@ -7,6 +7,7 @@
         type="text"
         [formField]="taskForm.title"
         placeholder="Task title"
+        aria-label="Task title"
         class="form-control" />
       @if (taskForm.title().touched() && taskForm.title().invalid()) {
         <div class="error-message">
@@ -20,6 +21,7 @@
       <textarea
         [formField]="taskForm.description"
         placeholder="Task description"
+        aria-label="Task description"
         class="form-control"></textarea>
     </div>
     <button
@@ -34,76 +36,78 @@
     </button>
   </form>
 
-  @if (isLoading()) {
+  @if (store.error(); as error) {
+    <div class="alert" role="alert">
+      <span>{{ error }}</span>
+      <button
+        type="button"
+        (click)="dispatch.errorDismissed()"
+        class="button-secondary">
+        Dismiss
+      </button>
+    </div>
+  }
+
+  @if (store.isLoading()) {
     <p class="loading">Loading tasks...</p>
   } @else {
     <div class="columns">
-      <div class="column">
-        <h3>To Do</h3>
-        @for (task of todo(); track task.id) {
-          <div class="task">
-            <div class="task-content">
-              <div class="title">{{ task.title }}</div>
-              @if (task.description) {
-                <div class="description">{{ task.description }}</div>
+      @for (column of columns; track column.title) {
+        <div class="column">
+          <h3>{{ column.title }}</h3>
+          @for (task of column.tasks(); track task.id) {
+            <div class="task">
+              @if (isEditing(task)) {
+                <app-task-edit />
+              } @else {
+                <div class="task-content">
+                  <div class="title">{{ task.title }}</div>
+                  @if (task.description) {
+                    <div class="description">{{ task.description }}</div>
+                  }
+                </div>
+                <div class="actions">
+                  @if (column.next; as next) {
+                    <button
+                      (click)="moveTo(task, next.status)"
+                      class="button-secondary">
+                      {{ next.label }}
+                    </button>
+                  }
+                  <button
+                    (click)="store.startEditing(task.id)"
+                    class="button-secondary">
+                    Edit
+                  </button>
+                  <button (click)="deleteTask(task.id)" class="button-danger">
+                    Delete
+                  </button>
+                </div>
               }
             </div>
-            <div class="actions">
-              <button
-                (click)="moveTo(task.id, TaskStatus.IN_PROGRESS)"
-                class="button-secondary">
-                Start
-              </button>
-              <button (click)="deleteTask(task.id)" class="button-danger">
-                Delete
-              </button>
-            </div>
-          </div>
-        }
-      </div>
-
-      <div class="column">
-        <h3>In Progress</h3>
-        @for (task of inProgress(); track task.id) {
-          <div class="task">
-            <div class="task-content">
-              <div class="title">{{ task.title }}</div>
-              @if (task.description) {
-                <div class="description">{{ task.description }}</div>
-              }
-            </div>
-            <div class="actions">
-              <button
-                (click)="moveTo(task.id, TaskStatus.DONE)"
-                class="button-secondary">
-                Complete
-              </button>
-              <button (click)="deleteTask(task.id)" class="button-danger">
-                Delete
-              </button>
-            </div>
-          </div>
-        }
-      </div>
-
-      <div class="column">
-        <h3>Done</h3>
-        @for (task of done(); track task.id) {
-          <div class="task">
-            <div class="task-content">
-              <div class="title">{{ task.title }}</div>
-              @if (task.description) {
-                <div class="description">{{ task.description }}</div>
-              }
-            </div>
-            <div class="actions">
-              <button (click)="deleteTask(task.id)" class="button-danger">
-                Delete
-              </button>
-            </div>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      }
     </div>
+
+    @if (store.pageCount() > 1) {
+      <nav class="pager" aria-label="Pages">
+        <button
+          type="button"
+          [disabled]="store.currentPage() <= 1"
+          (click)="dispatch.pageChanged(store.currentPage() - 1)"
+          class="button-secondary">
+          Previous
+        </button>
+        <span>Page {{ store.currentPage() }} of {{ store.pageCount() }}</span>
+        <button
+          type="button"
+          [disabled]="store.currentPage() >= store.pageCount()"
+          (click)="dispatch.pageChanged(store.currentPage() + 1)"
+          class="button-secondary">
+          Next
+        </button>
+      </nav>
+    }
   }
 </section>
