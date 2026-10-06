@@ -9,24 +9,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
+      # No version input: the action reads it from packageManager in package.json,
+      # so CI and local installs always run the same pnpm.
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '24.21.0'
+          node-version-file: package.json
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Run linting
         run: pnpm lint
 
+      - name: Check formatting
+        run: pnpm format:check
+
       - name: Run tests
         run: pnpm test
+
+      - name: Build
+        run: pnpm build
