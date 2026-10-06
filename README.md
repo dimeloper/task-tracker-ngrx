@@ -18,11 +18,12 @@ A modern task management application built with Angular and NgRx Signals Events,
 Each article in the series ships against a tag, so the code you are reading
 matches the post you came from.
 
-| Tag                   | Article                                              |
-| --------------------- | ---------------------------------------------------- |
-| `v1.0.0-method-based` | Using NgRx Signal Store for State Management         |
-| `v2.0.0-event-based`  | Event-Driven State Management with NgRx Signal Store |
-| `v3.0.0-signal-forms` | Building Angular Forms with Signal Forms and NgRx    |
+| Tag                             | Article                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `v1.0.0-method-based`           | Using NgRx Signal Store for State Management                                          |
+| `v2.0.0-event-based`            | Event-Driven State Management with NgRx Signal Store                                  |
+| `v3.0.0-signal-forms`           | Signal Forms Meet an Event-Driven NgRx Signal Store (first attempt: the event bridge) |
+| `v4.0.0-signal-forms-mutations` | Signal Forms Meet an Event-Driven NgRx Signal Store (mutations and the edit form)     |
 
 ## Tech Stack
 
