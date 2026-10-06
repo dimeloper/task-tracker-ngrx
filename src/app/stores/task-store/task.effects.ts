@@ -1,7 +1,14 @@
 import { inject } from '@angular/core';
 import { Events, withEventHandlers } from '@ngrx/signals/events';
 import { signalStoreFeature } from '@ngrx/signals';
-import { exhaustMap, tap, catchError, concatMap } from 'rxjs/operators';
+import {
+  exhaustMap,
+  tap,
+  catchError,
+  concatMap,
+  groupBy,
+  mergeMap,
+} from 'rxjs/operators';
 import { of } from 'rxjs';
 import { TaskService } from '../../services/task.service';
 import { taskPageEvents, taskApiEvents } from './task.events';
@@ -59,8 +66,10 @@ export function withTaskEffects() {
         ),
 
         // Delete task
+        // mergeMap: deleting one task says nothing about another, so a delete
+        // clicked while an earlier one is in flight is sent, not dropped.
         deleteTask$: events.on(taskPageEvents.taskDeleted).pipe(
-          exhaustMap(event =>
+          mergeMap(event =>
             taskService.deleteTask(event.payload).pipe(
               catchError((error: { message: string }) =>
                 of(taskApiEvents.taskDeletedFailure(error.message))
@@ -73,30 +82,40 @@ export function withTaskEffects() {
         ),
 
         // Change task status
+        // The reducer has already moved the card, so no move may be dropped:
+        // exhaustMap would skip the request and leave the board ahead of the
+        // server with no failure to roll it back. Moves are queued per task,
+        // so "start" then "complete" reach the server in that order, while
+        // moves of different tasks don't wait on each other.
         changeTaskStatus$: events.on(taskPageEvents.taskStatusChanged).pipe(
-          exhaustMap(event => {
-            return taskService
-              .updateTaskStatus(event.payload.id, event.payload.status)
-              .pipe(
-                concatMap(() =>
-                  of(
-                    taskApiEvents.taskStatusChangedSuccess({
-                      id: event.payload.id,
-                      status: event.payload.status,
-                    })
+          groupBy(event => event.payload.id),
+          mergeMap(movesOfOneTask =>
+            movesOfOneTask.pipe(
+              concatMap(event =>
+                taskService
+                  .updateTaskStatus(event.payload.id, event.payload.status)
+                  .pipe(
+                    concatMap(() =>
+                      of(
+                        taskApiEvents.taskStatusChangedSuccess({
+                          id: event.payload.id,
+                          status: event.payload.status,
+                        })
+                      )
+                    ),
+                    catchError((error: { message: string }) =>
+                      of(
+                        taskApiEvents.taskStatusChangedFailure({
+                          id: event.payload.id,
+                          previousStatus: event.payload.previousStatus,
+                          error: error.message,
+                        })
+                      )
+                    )
                   )
-                ),
-                catchError((error: { message: string }) =>
-                  of(
-                    taskApiEvents.taskStatusChangedFailure({
-                      id: event.payload.id,
-                      previousStatus: event.payload.previousStatus,
-                      error: error.message,
-                    })
-                  )
-                )
-              );
-          })
+              )
+            )
+          )
         ),
       })
     )
