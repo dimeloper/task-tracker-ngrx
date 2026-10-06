@@ -1,0 +1,10 @@
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+overrides:
+  # angular-eslint 22.5.0 depends on an older @typescript-eslint/utils directly,
+  # and its rules crash on startup when they load that copy instead of the one
+  # typescript-eslint brings. Keep this in step with typescript-eslint.
+  '@typescript-eslint/utils': 8.71.0
