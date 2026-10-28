@@ -169,9 +169,6 @@ importers:
 
   .:
     dependencies:
-      '@angular-architects/ngrx-toolkit':
-        specifier: ^22.0.0
-        version: 22.0.0(@angular/common@22.2.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(@ngrx/signals@22.0.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(rxjs@7.8.2)
       '@angular/common':
         specifier: ^22.2.1
         version: 22.2.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
@@ -196,6 +193,9 @@ importers:
       '@angular/ssr':
         specifier: ^22.2.1
         version: 22.2.1(46736938b12dbdf4a8512292903352de)
+      '@ngrx-toolkit/core':
+        specifier: ^22.0.1
+        version: 22.0.1(@angular/common@22.2.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(@ngrx/signals@22.0.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(rxjs@7.8.2)
       '@ngrx/signals':
         specifier: ^22.0.1
         version: 22.0.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
@@ -300,19 +300,6 @@ packages:
       zone.js: '>=0.14.0'
     peerDependenciesMeta:
       zone.js:
-        optional: true
-
-  '@angular-architects/ngrx-toolkit@22.0.0':
-    resolution: {integrity: sha512-sZ/3VO+ZtL0fzYmG680JQQ64t0Wh1Rh3k555Jj57CEE1+N/CbDzz9lIdJj4p8smkVGRmPhXrId2gajmnhV3gaA==}
-    deprecated: This package has moved to @ngrx-toolkit/core. Please update your dependency and imports.
-    peerDependencies:
-      '@angular/common': ^22.0.0
-      '@angular/core': ^22.0.0
-      '@ngrx/signals': ^22.0.0
-      '@ngrx/store': ^22.0.0
-      rxjs: ^7.0.0
-    peerDependenciesMeta:
-      '@ngrx/store':
         optional: true
 
   '@angular-devkit/architect@0.2201.8':
@@ -1336,6 +1323,18 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
+
+  '@ngrx-toolkit/core@22.0.1':
+    resolution: {integrity: sha512-57DKzE4xIAA2Td2ZfLleCGuju7BjeK/mB1GvXX39oXNzxQ1xMlZoMfY9nUzobsPrOeJe/oLES3wkJyhrGmrsaQ==}
+    peerDependencies:
+      '@angular/common': ^22.0.0
+      '@angular/core': ^22.0.0
+      '@ngrx/signals': ^22.0.0
+      '@ngrx/store': ^22.0.0
+      rxjs: ^7.0.0
+    peerDependenciesMeta:
+      '@ngrx/store':
+        optional: true
 
   '@ngrx/eslint-plugin@22.0.1':
     resolution: {integrity: sha512-jBhZaLaFJZh0UWFSBx54Hkoog05akw6ovQFARkk65QAf/2BgN8EZOnAS3zUavFPHX90m4RYAkMzj9bRZI7iL8g==}
@@ -4300,14 +4299,6 @@ snapshots:
     optionalDependencies:
       zone.js: 0.16.3
 
-  '@angular-architects/ngrx-toolkit@22.0.0(@angular/common@22.2.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(@ngrx/signals@22.0.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(rxjs@7.8.2)':
-    dependencies:
-      '@angular/common': 22.2.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
-      '@angular/core': 22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3)
-      '@ngrx/signals': 22.0.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
-      rxjs: 7.8.2
-      tslib: 2.8.1
-
   '@angular-devkit/architect@0.2201.8(chokidar@5.0.0)':
     dependencies:
       '@angular-devkit/core': 22.1.8(chokidar@5.0.0)
@@ -5299,6 +5290,14 @@ snapshots:
       '@emnapi/runtime': 1.11.3
       '@tybys/wasm-util': 0.10.4
     optional: true
+
+  '@ngrx-toolkit/core@22.0.1(@angular/common@22.2.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(@ngrx/signals@22.0.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/common': 22.2.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
+      '@angular/core': 22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3)
+      '@ngrx/signals': 22.0.1(@angular/core@22.2.1(@angular/compiler@22.2.1)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
+      rxjs: 7.8.2
+      tslib: 2.8.1
 
   '@ngrx/eslint-plugin@22.0.1(@typescript-eslint/utils@8.71.0(eslint@10.12.0(jiti@1.21.7)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.12.0(jiti@1.21.7)(supports-color@8.1.1))(typescript-eslint@8.71.0(eslint@10.12.0(jiti@1.21.7)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(typescript@6.0.3)':
     dependencies:

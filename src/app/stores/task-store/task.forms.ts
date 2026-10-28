@@ -8,7 +8,7 @@ import {
 } from '@ngrx/signals';
 import { NamedEntityState } from '@ngrx/signals/entities';
 import { Dispatcher } from '@ngrx/signals/events';
-import { rxMutation, withMutations } from '@angular-architects/ngrx-toolkit';
+import { rxMutation, withMutations } from '@ngrx-toolkit/core';
 import { NewTask, Task, TaskBoardState, TaskEdit } from '../../interfaces/task';
 import { TaskService } from '../../services/task.service';
 import { taskApiEvents } from './task.events';

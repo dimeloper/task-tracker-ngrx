@@ -30,7 +30,7 @@ matches the post you came from.
 - Angular 22+
 - Angular Signal Forms (`@angular/forms/signals`)
 - NgRx Signals with Events plugin for state management
-- `@angular-architects/ngrx-toolkit` for mutations (`withMutations`, `rxMutation`)
+- `@ngrx-toolkit/core` for mutations (`withMutations`, `rxMutation`)
 - RxJS for reactive programming
 - Vitest for testing
 - SCSS for styling
