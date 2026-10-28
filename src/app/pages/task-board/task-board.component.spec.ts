@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TaskBoardComponent } from './task-board.component';
+import { TaskStatus } from '../../interfaces/task';
 
 describe('TaskBoardComponent', () => {
   let component: TaskBoardComponent;
@@ -33,7 +34,11 @@ describe('TaskBoardComponent', () => {
     });
 
     it('rejects a title shorter than three characters', () => {
-      component.draft.set({ title: 'ab', description: '' });
+      component.draft.set({
+        title: 'ab',
+        description: '',
+        status: TaskStatus.TODO,
+      });
       expect(
         component.taskForm
           .title()
@@ -44,13 +49,21 @@ describe('TaskBoardComponent', () => {
     });
 
     it('accepts a title of three characters or more', () => {
-      component.draft.set({ title: 'Mop the floor', description: '' });
+      component.draft.set({
+        title: 'Mop the floor',
+        description: '',
+        status: TaskStatus.TODO,
+      });
       expect(component.taskForm.title().errors()).toEqual([]);
       expect(component.taskForm().valid()).toBe(true);
     });
 
     it('leaves the description unvalidated', () => {
-      component.draft.set({ title: 'Mop the floor', description: '' });
+      component.draft.set({
+        title: 'Mop the floor',
+        description: '',
+        status: TaskStatus.TODO,
+      });
       expect(component.taskForm.description().errors()).toEqual([]);
     });
   });
@@ -62,11 +75,16 @@ describe('TaskBoardComponent', () => {
       component.draft.set({
         title: 'A brand new task',
         description: 'written by the spec',
+        status: TaskStatus.TODO,
       });
 
       await component.createTask(submitEvent());
 
-      expect(component.draft()).toEqual({ title: '', description: '' });
+      expect(component.draft()).toEqual({
+        title: '',
+        description: '',
+        status: TaskStatus.TODO,
+      });
       expect(
         component.todo().some(task => task.title === 'A brand new task')
       ).toBe(true);
@@ -76,7 +94,11 @@ describe('TaskBoardComponent', () => {
       // Writing the model signal empties the field but leaves it touched, and an
       // empty touched title is immediately "required" again. Only reset() clears
       // both, so this is what holds that choice in place.
-      component.draft.set({ title: 'A fresh task', description: '' });
+      component.draft.set({
+        title: 'A fresh task',
+        description: '',
+        status: TaskStatus.TODO,
+      });
       component.taskForm.title().markAsTouched();
 
       await component.createTask(submitEvent());
@@ -90,7 +112,11 @@ describe('TaskBoardComponent', () => {
       // The mock service rejects a title that already exists, which is the kind of
       // failure only the server can know about.
       const existing = 'Clean the kitchen'; // seeded in HOUSEHOLD_TASKS
-      component.draft.set({ title: existing, description: '' });
+      component.draft.set({
+        title: existing,
+        description: '',
+        status: TaskStatus.TODO,
+      });
 
       await component.createTask(submitEvent());
 
@@ -103,9 +129,31 @@ describe('TaskBoardComponent', () => {
       expect(component.draft().title).toBe(existing);
     });
 
+    it('starts the task in the column picked in the status control', async () => {
+      const picker: HTMLElement =
+        fixture.nativeElement.querySelector('app-status-picker');
+      const inProgress = [...picker.querySelectorAll('button')].find(
+        button => button.textContent?.trim() === 'In Progress'
+      );
+      inProgress?.click();
+      expect(component.taskForm.status().value()).toBe(TaskStatus.IN_PROGRESS);
+
+      component.taskForm.title().value.set('Paint the fence');
+      await component.createTask(submitEvent());
+
+      expect(
+        component.inProgress().some(task => task.title === 'Paint the fence')
+      ).toBe(true);
+      expect(component.taskForm.status().value()).toBe(TaskStatus.TODO);
+    });
+
     it('does not submit while the form is invalid', async () => {
       const before = component.todo().length;
-      component.draft.set({ title: 'ab', description: '' });
+      component.draft.set({
+        title: 'ab',
+        description: '',
+        status: TaskStatus.TODO,
+      });
 
       await component.createTask(submitEvent());
 

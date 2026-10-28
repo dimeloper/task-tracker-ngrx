@@ -1,0 +1,16 @@
+<div
+  class="status-picker"
+  role="group"
+  aria-label="Starting column"
+  (focusout)="touch.emit()">
+  @for (option of options; track option.status) {
+    <button
+      type="button"
+      [attr.aria-pressed]="value() === option.status"
+      [class.selected]="value() === option.status"
+      [disabled]="disabled()"
+      (click)="value.set(option.status)">
+      {{ option.label }}
+    </button>
+  }
+</div>

@@ -9,13 +9,7 @@ import {
 import { NamedEntityState } from '@ngrx/signals/entities';
 import { Dispatcher } from '@ngrx/signals/events';
 import { rxMutation, withMutations } from '@angular-architects/ngrx-toolkit';
-import {
-  Task,
-  TaskBoardState,
-  TaskDraft,
-  TaskEdit,
-  TaskStatus,
-} from '../../interfaces/task';
+import { NewTask, Task, TaskBoardState, TaskEdit } from '../../interfaces/task';
 import { TaskService } from '../../services/task.service';
 import { taskApiEvents } from './task.events';
 
@@ -66,9 +60,8 @@ export function withTaskForms<_>() {
     // dispatched as an API event, so the reducer still makes every state change
     // and the event log still sees every result.
     withMutations(store => ({
-      createTask: rxMutation<TaskDraft, Task>({
-        operation: (draft: TaskDraft) =>
-          store._taskService.createTask({ ...draft, status: TaskStatus.TODO }),
+      createTask: rxMutation<NewTask, Task>({
+        operation: (draft: NewTask) => store._taskService.createTask(draft),
         onSuccess: task =>
           store._dispatcher.dispatch(taskApiEvents.taskCreatedSuccess(task)),
         onError: error =>

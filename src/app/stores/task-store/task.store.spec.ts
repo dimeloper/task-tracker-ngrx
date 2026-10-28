@@ -118,6 +118,7 @@ describe('TaskStore', () => {
       const result = await store.createTask({
         title: 'Fold the laundry',
         description: '',
+        status: TaskStatus.TODO,
       });
 
       expect(mockTaskService.createTask).toHaveBeenCalledWith({
@@ -138,6 +139,7 @@ describe('TaskStore', () => {
       const result = await store.createTask({
         title: 'Water the plants',
         description: '',
+        status: TaskStatus.TODO,
       });
 
       expect(result).toEqual({
