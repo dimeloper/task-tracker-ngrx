@@ -5,14 +5,19 @@ import { TaskStore } from '../../stores/task-store/task.store';
 import { errorMessage } from '../../stores/task-store/task.forms';
 import { taskPageEvents } from '../../stores/task-store/task.events';
 import { taskTitleSchema } from '../../forms/task-title.schema';
-import { Task, TaskDraft, TaskStatus } from '../../interfaces/task';
+import { NewTask, Task, TaskStatus } from '../../interfaces/task';
+import { StatusPickerComponent } from '../../forms/status-picker/status-picker.component';
 import { TaskEditComponent } from './task-edit/task-edit.component';
 
-const EMPTY_DRAFT: TaskDraft = { title: '', description: '' };
+const EMPTY_DRAFT: NewTask = {
+  title: '',
+  description: '',
+  status: TaskStatus.TODO,
+};
 
 @Component({
   selector: 'app-task-board',
-  imports: [FormField, TaskEditComponent],
+  imports: [FormField, StatusPickerComponent, TaskEditComponent],
   templateUrl: './task-board.component.html',
   styleUrls: ['./task-board.component.scss'],
 })

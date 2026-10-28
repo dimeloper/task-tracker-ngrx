@@ -18,19 +18,20 @@ A modern task management application built with Angular and NgRx Signals Events,
 Each article in the series ships against a tag, so the code you are reading
 matches the post you came from.
 
-| Tag                             | Article                                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------------- |
-| `v1.0.0-method-based`           | Using NgRx Signal Store for State Management                                          |
-| `v2.0.0-event-based`            | Event-Driven State Management with NgRx Signal Store                                  |
-| `v3.0.0-signal-forms`           | Signal Forms Meet an Event-Driven NgRx Signal Store (first attempt: the event bridge) |
-| `v4.0.0-signal-forms-mutations` | Signal Forms Meet an Event-Driven NgRx Signal Store (mutations and the edit form)     |
+| Tag                                  | Article                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `v1.0.0-method-based`                | Using NgRx Signal Store for State Management                                                      |
+| `v2.0.0-event-based`                 | Event-Driven State Management with NgRx Signal Store                                              |
+| `v3.0.0-signal-forms`                | Angular Signal Forms with an Event-Driven NgRx Signal Store (first attempt: the event bridge)     |
+| `v4.0.0-signal-forms-mutations`      | Angular Signal Forms with an Event-Driven NgRx Signal Store (mutations and the edit form)         |
+| `v4.1.0-signal-forms-custom-control` | Angular Signal Forms with an Event-Driven NgRx Signal Store (a custom control: the status picker) |
 
 ## Tech Stack
 
 - Angular 22+
 - Angular Signal Forms (`@angular/forms/signals`)
 - NgRx Signals with Events plugin for state management
-- `@angular-architects/ngrx-toolkit` for mutations (`withMutations`, `rxMutation`)
+- `@ngrx-toolkit/core` for mutations (`withMutations`, `rxMutation`)
 - RxJS for reactive programming
 - Vitest for testing
 - SCSS for styling

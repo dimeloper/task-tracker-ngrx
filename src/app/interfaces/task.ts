@@ -18,6 +18,11 @@ export interface TaskDraft {
   description: string;
 }
 
+/** A task the create form submits: the typed fields and the column it starts in. */
+export interface NewTask extends TaskDraft {
+  status: TaskStatus;
+}
+
 /** An edit in progress: which task, and what it currently says. */
 export interface TaskEdit extends TaskDraft {
   id: string;
