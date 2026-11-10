@@ -46,7 +46,13 @@ export function withTaskForms<_>() {
           });
         }
       },
+      // A write that lands while no edit is open (a late reset() after the
+      // success event cleared the draft, say) is dropped, so null keeps
+      // meaning closed instead of turning into an empty edit.
       updateTaskEdit(taskEdit: TaskEdit): void {
+        if (store.taskEdit() === null) {
+          return;
+        }
         patchState(store, { taskEdit });
       },
       stopEditing(): void {

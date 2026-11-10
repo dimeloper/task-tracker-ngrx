@@ -181,6 +181,11 @@ describe('TaskStore', () => {
       expect(store.taskEntities()[0].title).toBe('Water the plants');
     });
 
+    it('ignores a draft write while no edit is open', () => {
+      store.updateTaskEdit({ id: '', title: '', description: '' });
+      expect(store.taskEdit()).toBeNull();
+    });
+
     it('drops the draft on cancel', () => {
       store.startEditing('1');
       store.stopEditing();
